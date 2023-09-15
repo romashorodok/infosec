@@ -1,0 +1,212 @@
+# Generated with protoc-gen-openapi
+# https://github.com/google/gnostic/tree/master/cmd/protoc-gen-openapi
+
+openapi: 3.0.3
+info:
+    title: Identity Service API
+    description: The service handle user authentication
+    contact: {}
+    license:
+        name: ""
+    version: 0.0.1
+servers:
+    - url: https://localhost
+paths:
+    /access-token:
+        put:
+            tags:
+                - TokenService
+            operationId: TokenService_ExchangeToken
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ExchangeTokenResponse'
+                default:
+                    description: Error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ErrorResponse'
+            security:
+                - BearerAuth: []
+    /keys:
+        get:
+            tags:
+                - PublicKeyService
+            operationId: PublicKeyService_PublicKeyList
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/PublicKeyListResponse'
+                default:
+                    description: Error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ErrorResponse'
+    /sign-in:
+        post:
+            tags:
+                - IdentityService
+            operationId: IdentityService_SignIn
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/SignInRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/SignInResponse'
+                default:
+                    description: Error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ErrorResponse'
+    /sign-out:
+        post:
+            tags:
+                - IdentityService
+            operationId: IdentityService_SignOut
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/SignOutResponse'
+                default:
+                    description: Error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ErrorResponse'
+            security:
+                - BearerAuth: []
+    /sign-up:
+        post:
+            tags:
+                - IdentityService
+            operationId: IdentityService_SignUp
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/SignUpRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/SignUpResponse'
+                default:
+                    description: Error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ErrorResponse'
+    /token-revocation:verify:
+        post:
+            tags:
+                - TokenRevocationService
+            operationId: TokenRevocationService_VerifyTokenRevocation
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VerifyTokenRevocationResponse'
+                default:
+                    description: Error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ErrorResponse'
+            security:
+                - BearerAuth: []
+components:
+    schemas:
+        ErrorResponse:
+            required:
+                - message
+            type: object
+            properties:
+                message:
+                    type: string
+        ExchangeTokenResponse:
+            type: object
+            properties:
+                accessToken:
+                    type: string
+        PublicKeyListResponse:
+            type: object
+            properties:
+                result:
+                    type: string
+                    format: bytes
+                generatedAt:
+                    type: string
+                    format: date-time
+        SignInRequest:
+            required:
+                - username
+                - password
+            type: object
+            properties:
+                username:
+                    maxLength: 30
+                    type: string
+                password:
+                    maxLength: 30
+                    type: string
+        SignInResponse:
+            type: object
+            properties:
+                errorResponse:
+                    $ref: '#/components/schemas/ErrorResponse'
+        SignOutResponse:
+            type: object
+            properties: {}
+        SignUpRequest:
+            required:
+                - username
+                - password
+            type: object
+            properties:
+                username:
+                    maxLength: 30
+                    type: string
+                password:
+                    maxLength: 30
+                    type: string
+        SignUpResponse:
+            type: object
+            properties: {}
+        VerifyTokenRevocationResponse:
+            type: object
+            properties:
+                revoked:
+                    type: boolean
+    securitySchemes:
+        BearerAuth:
+            type: http
+            scheme: bearer
+tags:
+    - name: IdentityService
+    - name: PublicKeyService
+    - name: TokenRevocationService
+    - name: TokenService

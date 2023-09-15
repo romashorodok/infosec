@@ -1,0 +1,17 @@
+version: "3.9"
+
+networks:
+  bridge:
+
+services:
+
+  identity-pg:
+    image: postgres:15.4-alpine3.18
+    environment:
+      POSTGRES_DB: "postgres"
+      POSTGRES_USER: "user"
+      POSTGRES_PASSWORD: "password"
+    ports:
+      - 5432:5432
+    networks:
+        - bridge
