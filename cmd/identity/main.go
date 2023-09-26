@@ -10,6 +10,7 @@ import (
 
 	"github.com/getkin/kin-openapi/openapi3filter"
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/cors"
 	_ "github.com/lib/pq"
 	v1httpidentity "github.com/romashorodok/infosec/internal/http/v1/identity"
 	"github.com/romashorodok/infosec/internal/identity"
@@ -56,8 +57,10 @@ func NewHTTPConfig() *HTTPConfig {
 	}
 }
 
+var router = chi.NewRouter()
+
 func NewRouter() *chi.Mux {
-	return chi.NewRouter()
+	return router
 }
 
 type DatabaseConfig struct {
@@ -152,6 +155,13 @@ func startServer(lifecycle fx.Lifecycle, config *HTTPConfig, handler *chi.Mux) {
 }
 
 func main() {
+	router.Use(cors.Handler(cors.Options{
+		AllowedOrigins:   []string{"https://*", "http://*"},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type"},
+		AllowCredentials: true,
+	}))
+
 	fx.New(
 		fx.Provide(
 			fx.Annotate(

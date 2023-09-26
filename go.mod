@@ -5,6 +5,7 @@ go 1.20
 require (
 	github.com/getkin/kin-openapi v0.120.0
 	github.com/go-chi/chi/v5 v5.0.10
+	github.com/go-chi/cors v1.2.1
 	github.com/go-jet/jet/v2 v2.10.1
 	github.com/google/uuid v1.3.1
 	github.com/lestrrat-go/jwx/v2 v2.0.12
