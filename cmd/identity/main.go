@@ -8,7 +8,6 @@ import (
 	"net"
 	"net/http"
 
-	"github.com/gofrs/uuid"
 	"github.com/romashorodok/infosec/ent"
 
 	"github.com/getkin/kin-openapi/openapi3filter"
@@ -187,10 +186,13 @@ func NewEntClient(params EntClientParams) (*ent.Client, error) {
 			log.Fatalf("failed creating schema resources: %v", err)
 		}
 
-		id, _ := uuid.FromString("bc3a2ad3-cc1c-4f46-8be4-62c6dc3872ff")
-		user, _ := client.User.Get(ctx, id)
+		// id, _ := uuid.FromString("bc3a2ad3-cc1c-4f46-8be4-62c6dc3872ff")
+		// user, _ := client.User.Get(ctx, id)
 
-		log.Printf("%+v", user)
+		// result, err := user.QueryParticipants().First(ctx)
+
+		// log.Printf("%+v", user)
+
 	}))
 
 	return client, nil
@@ -203,6 +205,7 @@ func main() {
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type"},
 		AllowCredentials: true,
 	}))
+
 
 	fx.New(
 		fx.Provide(
