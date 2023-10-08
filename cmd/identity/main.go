@@ -8,6 +8,9 @@ import (
 	"net"
 	"net/http"
 
+	"github.com/gofrs/uuid"
+	"github.com/romashorodok/infosec/ent"
+
 	"github.com/getkin/kin-openapi/openapi3filter"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/cors"
@@ -21,6 +24,8 @@ import (
 	"github.com/romashorodok/infosec/pkg/auth"
 	"github.com/romashorodok/infosec/pkg/envutils"
 	"go.uber.org/fx"
+
+	_ "github.com/lib/pq"
 )
 
 const (
@@ -154,6 +159,43 @@ func startServer(lifecycle fx.Lifecycle, config *HTTPConfig, handler *chi.Mux) {
 	})
 }
 
+type EntClientParams struct {
+	fx.In
+
+	Dconf     *DatabaseConfig
+	Lifecycle fx.Lifecycle
+}
+
+func NewEntClient(params EntClientParams) (*ent.Client, error) {
+	conn := fmt.Sprintf("host=%s port=%s user=%s dbname=%s password=%s sslmode=disable",
+		params.Dconf.Host,
+		params.Dconf.Port,
+		params.Dconf.Username,
+		params.Dconf.Database,
+		params.Dconf.Password,
+	)
+	client, err := ent.Open("postgres", conn)
+	if err != nil {
+		return nil, err
+	}
+	params.Lifecycle.Append(fx.StopHook(func() {
+		client.Close()
+	}))
+
+	params.Lifecycle.Append(fx.StartHook(func(ctx context.Context) {
+		if err := client.Schema.Create(ctx); err != nil {
+			log.Fatalf("failed creating schema resources: %v", err)
+		}
+
+		id, _ := uuid.FromString("bc3a2ad3-cc1c-4f46-8be4-62c6dc3872ff")
+		user, _ := client.User.Get(ctx, id)
+
+		log.Printf("%+v", user)
+	}))
+
+	return client, nil
+}
+
 func main() {
 	router.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   []string{"https://*", "http://*"},
@@ -173,6 +215,7 @@ func main() {
 			NewDatabaseConnection,
 			NewHTTPConfig,
 			NewRouter,
+			NewEntClient,
 
 			user.NewUserRepository,
 			privatekey.NewPrivateKeyRepositroy,
@@ -189,5 +232,6 @@ func main() {
 		),
 		fx.Invoke(v1httpidentity.RegisterIdentityHandler),
 		fx.Invoke(startServer),
+		fx.Invoke(func(*ent.Client) {}),
 	).Run()
 }
