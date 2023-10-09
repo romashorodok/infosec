@@ -7,6 +7,9 @@ import (
 	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
 	"github.com/gofrs/uuid"
+	"entgo.io/ent/schema"
+
+	entlocal "github.com/romashorodok/infosec/ent"
 )
 
 // User holds the schema definition for the User entity.
@@ -23,21 +26,11 @@ func (User) Fields() []ent.Field {
 func (User) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.To("Participants", Participant.Type),
-		// edge.From("Participants", Participant.Type).Ref("users"),
-
-
-		// // This make role_users many to many
-		// edge.From("roles", Role.Type).
-		// 	Ref("users"),
-
-		// edge.From("boards", Board.Type).Ref("users"),
-
-
-		// edge.From("user_roles", Role.Type).Ref("roles"),
-		// edge.From("role_users", User.Type).Ref("users"),
-		// edge.To("roles", Role.Type),
-		// edge.From("role_users", Role.Type).Ref("roles"),
-		// edge.To("boards", Board.Type),
-		// edge.To("board_users", BoardUsers.Type),
+	}
+}
+ 
+func (User) Annotations() []schema.Annotation {
+	return []schema.Annotation{
+		entlocal.ElkSecurity,
 	}
 }

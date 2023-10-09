@@ -1,6 +1,11 @@
 package schema
 
-import "entgo.io/ent"
+import (
+	"entgo.io/ent"
+	"entgo.io/ent/schema"
+
+	entlocal "github.com/romashorodok/infosec/ent"
+)
 
 // Grant holds the schema definition for the Grant entity.
 type Grant struct {
@@ -15,4 +20,10 @@ func (Grant) Fields() []ent.Field {
 // Edges of the Grant.
 func (Grant) Edges() []ent.Edge {
 	return nil
+}
+
+func (Grant) Annotations() []schema.Annotation {
+	return []schema.Annotation{
+		entlocal.ElkSecurity,
+	}
 }
