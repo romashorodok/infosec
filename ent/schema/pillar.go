@@ -5,7 +5,7 @@ import (
 	"entgo.io/ent/schema"
 	"entgo.io/ent/schema/edge"
 
-	entlocal "github.com/romashorodok/infosec/ent"
+	"github.com/romashorodok/infosec/pkg/entutils"
 )
 
 // Pillar holds the schema definition for the Pillar entity.
@@ -27,6 +27,6 @@ func (Pillar) Edges() []ent.Edge {
 
 func (Pillar) Annotations() []schema.Annotation {
 	return []schema.Annotation{
-		entlocal.ElkSecurity,
+		entutils.ElkSecurity,
 	}
 }

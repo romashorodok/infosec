@@ -9,7 +9,7 @@ import (
 	"log"
 	"reflect"
 
-	"github.com/gofrs/uuid"
+	"github.com/google/uuid"
 	"github.com/romashorodok/infosec/ent/migrate"
 
 	"entgo.io/ent"

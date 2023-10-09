@@ -4,12 +4,12 @@ package schema
 
 import (
 	"entgo.io/ent"
+	"entgo.io/ent/schema"
 	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
-	"github.com/gofrs/uuid"
-	"entgo.io/ent/schema"
 
-	entlocal "github.com/romashorodok/infosec/ent"
+	"github.com/google/uuid"
+	"github.com/romashorodok/infosec/pkg/entutils"
 )
 
 // User holds the schema definition for the User entity.
@@ -20,7 +20,9 @@ type User struct {
 // Fields of the User..
 func (User) Fields() []ent.Field {
 	return []ent.Field{
-		field.UUID("id", uuid.UUID{}), field.String("username").Unique(), field.String("password")}
+		field.UUID("id", uuid.Nil).Default(uuid.New),
+		field.String("username").Unique(),
+		field.String("password")}
 }
 
 func (User) Edges() []ent.Edge {
@@ -31,6 +33,6 @@ func (User) Edges() []ent.Edge {
  
 func (User) Annotations() []schema.Annotation {
 	return []schema.Annotation{
-		entlocal.ElkSecurity,
+		entutils.ElkSecurity,
 	}
 }

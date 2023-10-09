@@ -5,12 +5,11 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/getkin/kin-openapi/openapi3filter"
 	"github.com/go-chi/chi/v5"
 	identitysvc "github.com/romashorodok/infosec/internal/identity"
 	identitysecurtysvc "github.com/romashorodok/infosec/internal/identity/security"
 	"github.com/romashorodok/infosec/pkg/httputils"
-	"github.com/romashorodok/infosec/pkg/openapi"
+	"github.com/romashorodok/infosec/pkg/openapi3utils"
 	"github.com/romashorodok/infosec/pkg/tokenutils"
 
 	"go.uber.org/fx"
@@ -21,11 +20,13 @@ import (
 type IdentityHandler struct {
 	Unimplemented
 
-	identitySvc identitysvc.IdentityService
-	securitySvc identitysecurtysvc.SecurityService
+	handlerSpecValidator openapi3utils.HandlerSpecValidator
+	identitySvc          identitysvc.IdentityService
+	securitySvc          identitysecurtysvc.SecurityService
 }
 
 var _ ServerInterface = (*IdentityHandler)(nil)
+var _ httputils.HttpHandler = (*IdentityHandler)(nil)
 
 func (h *IdentityHandler) IdentityServiceSignIn(w http.ResponseWriter, r *http.Request) {
 	var request SignInRequest
@@ -191,30 +192,60 @@ func (h *IdentityHandler) IdentityServiceSignOut(w http.ResponseWriter, r *http.
 	w.Header().Set("Content-Type", "application/json")
 }
 
+// GetOption implements httputils.HttpHandler.
+func (h *IdentityHandler) GetOption() httputils.HttpHandlerOption {
+	return func(hand http.Handler) {
+		switch hand.(type) {
+		case *chi.Mux:
+			mux := hand.(*chi.Mux)
+			spec, err := GetSwagger()
+			if err != nil {
+				log.Panicf("unable get openapi spec for streamchannels.handler.Err: %s", err)
+			}
+			spec.Servers = nil
+
+			HandlerWithOptions(h, ChiServerOptions{
+				BaseRouter: mux,
+				Middlewares: []MiddlewareFunc{
+					h.handlerSpecValidator(spec),
+					httputils.JsonMiddleware(),
+				},
+			})
+		}
+	}
+}
+
 type IdentityHandlerParams struct {
 	fx.In
+
+	HandlerSpecValidator openapi3utils.HandlerSpecValidator
 
 	IdentitySvc identitysvc.IdentityService
 	SecuritySvc identitysecurtysvc.SecurityService
 
-	Lifecycle     fx.Lifecycle
-	Router        *chi.Mux
-	FilterOptions openapi3filter.Options
+	// Lifecycle     fx.Lifecycle
+	// Router        *chi.Mux
+	// FilterOptions openapi3filter.Options
 }
 
-func RegisterIdentityHandler(params IdentityHandlerParams) {
-	spec, err := GetSwagger()
-	spec.Servers = nil
-	if err != nil {
-		log.Panicf("Uanble get openapi spec. %s", err)
+func NewHandler(params IdentityHandlerParams) *IdentityHandler {
+	return &IdentityHandler{
+		handlerSpecValidator: params.HandlerSpecValidator,
+		identitySvc:          params.IdentitySvc,
+		securitySvc:          params.SecuritySvc,
 	}
+	// spec, err := GetSwagger()
+	// spec.Servers = nil
+	// if err != nil {
+	// 	log.Panicf("Uanble get openapi spec. %s", err)
+	// }
 
-	params.Router.Use(openapi.NewOpenAPIRequestMiddleware(spec, &openapi.Options{
-		Options: params.FilterOptions,
-	}))
+	// params.Router.Use(openapi.NewOpenAPIRequestMiddleware(spec, &openapi.Options{
+	// 	Options: params.FilterOptions,
+	// }))
 
-	HandlerFromMux(&IdentityHandler{
-		identitySvc: params.IdentitySvc,
-		securitySvc: params.SecuritySvc,
-	}, params.Router)
+	// HandlerFromMux(&IdentityHandler{
+	// 	identitySvc: params.IdentitySvc,
+	// 	securitySvc: params.SecuritySvc,
+	// }, params.Router)
 }

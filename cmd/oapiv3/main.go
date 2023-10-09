@@ -13,7 +13,7 @@ import (
 	"entgo.io/ent/entc/gen"
 	"github.com/masseelch/elk"
 	"github.com/masseelch/elk/spec"
-	entlocal "github.com/romashorodok/infosec/ent"
+	"github.com/romashorodok/infosec/pkg/entutils"
 )
 
 func main() {
@@ -21,7 +21,7 @@ func main() {
 		elk.GenerateSpec("openapi.json",
 			elk.SpecSecuritySchemes(
 				map[string]spec.SecurityScheme{
-					entlocal.SecurityBearerAuth: {
+					entutils.SecurityBearerAuth: {
 						Type:   "http",
 						Scheme: "bearer",
 					},

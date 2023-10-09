@@ -5,7 +5,7 @@ import (
 	"entgo.io/ent/schema"
 	"entgo.io/ent/schema/edge"
 
-	entlocal "github.com/romashorodok/infosec/ent"
+	"github.com/romashorodok/infosec/pkg/entutils"
 )
 
 // Participant holds the schema definition for the Participant entity.
@@ -28,6 +28,6 @@ func (Participant) Edges() []ent.Edge {
 
 func (Participant) Annotations() []schema.Annotation {
 	return []schema.Annotation{
-		entlocal.ElkSecurity,
+		entutils.ElkSecurity,
 	}
 }

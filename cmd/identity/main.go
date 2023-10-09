@@ -9,12 +9,14 @@ import (
 	"net/http"
 
 	"github.com/romashorodok/infosec/ent"
+	"github.com/romashorodok/infosec/ent/migrate"
 
 	"github.com/getkin/kin-openapi/openapi3filter"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/cors"
 	_ "github.com/lib/pq"
 	v1httpidentity "github.com/romashorodok/infosec/internal/http/v1/identity"
+	"github.com/romashorodok/infosec/internal/http/v1/kanban"
 	"github.com/romashorodok/infosec/internal/identity"
 	"github.com/romashorodok/infosec/internal/identity/security"
 	"github.com/romashorodok/infosec/internal/storage/postgres/privatekey"
@@ -22,6 +24,9 @@ import (
 	"github.com/romashorodok/infosec/internal/storage/postgres/user"
 	"github.com/romashorodok/infosec/pkg/auth"
 	"github.com/romashorodok/infosec/pkg/envutils"
+	"github.com/romashorodok/infosec/pkg/httputils"
+	"github.com/romashorodok/infosec/pkg/openapi"
+	"github.com/romashorodok/infosec/pkg/openapi3utils"
 	"go.uber.org/fx"
 
 	_ "github.com/lib/pq"
@@ -52,6 +57,10 @@ const (
 type HTTPConfig struct {
 	Port string
 	Host string
+}
+
+func (h *HTTPConfig) GetAddr() string {
+	return net.JoinHostPort(h.Host, h.Port)
 }
 
 func NewHTTPConfig() *HTTPConfig {
@@ -137,30 +146,56 @@ func NewOpenAPI3FilterOptions(params OpenAPI3FilterOptions) openapi3filter.Optio
 	}
 }
 
-func startServer(lifecycle fx.Lifecycle, config *HTTPConfig, handler *chi.Mux) {
+type NewSpecOptionsHandlerConstructorParams struct {
+	fx.In
+
+	Options openapi3filter.Options
+}
+
+func NewSpecOptionsHandlerConstructor(params NewSpecOptionsHandlerConstructorParams) openapi3utils.HandlerSpecValidator {
+	return func(spec *openapi3utils.Spec) openapi3utils.HandlerFunc {
+		return openapi.NewOpenAPIRequestMiddleware(spec, &openapi.Options{
+			Options: params.Options,
+		})
+	}
+}
+
+type startServerParams struct {
+	fx.In
+	Lifecycle fx.Lifecycle
+	Config    *HTTPConfig
+	Handler   *chi.Mux
+	Handlers  []httputils.HttpHandler `group:"http.handler"`
+}
+
+func startServer(params startServerParams) {
 	server := &http.Server{
-		Addr:    net.JoinHostPort(config.Host, config.Port),
-		Handler: handler,
+		Addr:    params.Config.GetAddr(),
+		Handler: params.Handler,
 	}
 
-	lifecycle.Append(fx.Hook{
-		OnStart: func(context.Context) error {
-			ln, err := net.Listen("tcp", server.Addr)
-			if err != nil {
-				return err
-			}
-			go server.Serve(ln)
-			return nil
-		},
-		OnStop: func(ctx context.Context) error {
+	for _, handler := range params.Handlers {
+		handler.GetOption()(server.Handler)
+	}
+
+	ln, err := net.Listen("tcp", server.Addr)
+	if err != nil {
+		panic(err)
+	}
+
+	go server.Serve(ln)
+
+	params.Lifecycle.Append(
+		fx.StopHook(func(ctx context.Context) error {
 			return server.Shutdown(ctx)
-		},
-	})
+		}),
+	)
 }
 
 type EntClientParams struct {
 	fx.In
 
+	DB        *sql.DB
 	Dconf     *DatabaseConfig
 	Lifecycle fx.Lifecycle
 }
@@ -182,9 +217,14 @@ func NewEntClient(params EntClientParams) (*ent.Client, error) {
 	}))
 
 	params.Lifecycle.Append(fx.StartHook(func(ctx context.Context) {
-		if err := client.Schema.Create(ctx); err != nil {
+		if err := client.Schema.Create(ctx,
+			migrate.WithDropColumn(false),
+			migrate.WithDropIndex(false),
+		); err != nil {
 			log.Fatalf("failed creating schema resources: %v", err)
 		}
+
+		_, _ = params.DB.ExecContext(ctx, "ALTER TABLE users ALTER COLUMN id SET DEFAULT uuid_generate_v4();")
 
 		// id, _ := uuid.FromString("bc3a2ad3-cc1c-4f46-8be4-62c6dc3872ff")
 		// user, _ := client.User.Get(ctx, id)
@@ -206,8 +246,12 @@ func main() {
 		AllowCredentials: true,
 	}))
 
-
 	fx.New(
+		fx.Provide(
+			httputils.AsHttpHandler(kanban.NewHandler),
+			httputils.AsHttpHandler(v1httpidentity.NewHandler),
+		),
+
 		fx.Provide(
 			fx.Annotate(
 				security.NewInternalServicePublicKeyResolver,
@@ -219,6 +263,8 @@ func main() {
 			NewHTTPConfig,
 			NewRouter,
 			NewEntClient,
+
+			NewSpecOptionsHandlerConstructor,
 
 			user.NewUserRepository,
 			privatekey.NewPrivateKeyRepositroy,
@@ -233,7 +279,7 @@ func main() {
 				fx.As(new(security.SecurityService)),
 			),
 		),
-		fx.Invoke(v1httpidentity.RegisterIdentityHandler),
+		// fx.Invoke(v1httpidentity.RegisterIdentityHandler),
 		fx.Invoke(startServer),
 		fx.Invoke(func(*ent.Client) {}),
 	).Run()

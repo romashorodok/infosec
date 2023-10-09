@@ -1,4 +1,4 @@
-package ent
+package entutils
 
 import (
 	"entgo.io/ent/schema"

@@ -5,7 +5,7 @@ import (
 	"entgo.io/ent/schema"
 	"entgo.io/ent/schema/edge"
 
-	entlocal "github.com/romashorodok/infosec/ent"
+	"github.com/romashorodok/infosec/pkg/entutils"
 )
 
 // Board holds the schema definition for the Board entity.
@@ -28,6 +28,6 @@ func (Board) Edges() []ent.Edge {
 
 func (Board) Annotations() []schema.Annotation {
 	return []schema.Annotation{
-		entlocal.ElkSecurity,
+		entutils.ElkSecurity,
 	}
 }

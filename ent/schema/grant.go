@@ -4,7 +4,7 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/schema"
 
-	entlocal "github.com/romashorodok/infosec/ent"
+	"github.com/romashorodok/infosec/pkg/entutils"
 )
 
 // Grant holds the schema definition for the Grant entity.
@@ -24,6 +24,6 @@ func (Grant) Edges() []ent.Edge {
 
 func (Grant) Annotations() []schema.Annotation {
 	return []schema.Annotation{
-		entlocal.ElkSecurity,
+		entutils.ElkSecurity,
 	}
 }

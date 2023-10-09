@@ -11,7 +11,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
-	"github.com/gofrs/uuid"
+	"github.com/google/uuid"
 	"github.com/romashorodok/infosec/ent/participant"
 	"github.com/romashorodok/infosec/ent/predicate"
 	"github.com/romashorodok/infosec/ent/user"
