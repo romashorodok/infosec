@@ -28,7 +28,13 @@ func (tu *TaskUpdate) Where(ps ...predicate.Task) *TaskUpdate {
 	return tu
 }
 
-// SetDescription sets the "Description" field.
+// SetTitle sets the "title" field.
+func (tu *TaskUpdate) SetTitle(s string) *TaskUpdate {
+	tu.mutation.SetTitle(s)
+	return tu
+}
+
+// SetDescription sets the "description" field.
 func (tu *TaskUpdate) SetDescription(s string) *TaskUpdate {
 	tu.mutation.SetDescription(s)
 	return tu
@@ -111,6 +117,9 @@ func (tu *TaskUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			}
 		}
 	}
+	if value, ok := tu.mutation.Title(); ok {
+		_spec.SetField(task.FieldTitle, field.TypeString, value)
+	}
 	if value, ok := tu.mutation.Description(); ok {
 		_spec.SetField(task.FieldDescription, field.TypeString, value)
 	}
@@ -179,7 +188,13 @@ type TaskUpdateOne struct {
 	mutation *TaskMutation
 }
 
-// SetDescription sets the "Description" field.
+// SetTitle sets the "title" field.
+func (tuo *TaskUpdateOne) SetTitle(s string) *TaskUpdateOne {
+	tuo.mutation.SetTitle(s)
+	return tuo
+}
+
+// SetDescription sets the "description" field.
 func (tuo *TaskUpdateOne) SetDescription(s string) *TaskUpdateOne {
 	tuo.mutation.SetDescription(s)
 	return tuo
@@ -291,6 +306,9 @@ func (tuo *TaskUpdateOne) sqlSave(ctx context.Context) (_node *Task, err error) 
 				ps[i](selector)
 			}
 		}
+	}
+	if value, ok := tuo.mutation.Title(); ok {
+		_spec.SetField(task.FieldTitle, field.TypeString, value)
 	}
 	if value, ok := tuo.mutation.Description(); ok {
 		_spec.SetField(task.FieldDescription, field.TypeString, value)

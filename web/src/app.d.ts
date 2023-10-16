@@ -6,6 +6,7 @@ declare global {
 		// interface Platform {}
 
 		interface PageData {
+			fetch: (input: RequestInfo | URL, init?: RequestInit | undefined) => Promise<Response>
 		}
 
 		interface Locals {

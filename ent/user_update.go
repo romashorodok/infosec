@@ -40,13 +40,13 @@ func (uu *UserUpdate) SetPassword(s string) *UserUpdate {
 	return uu
 }
 
-// AddParticipantIDs adds the "Participants" edge to the Participant entity by IDs.
+// AddParticipantIDs adds the "participants" edge to the Participant entity by IDs.
 func (uu *UserUpdate) AddParticipantIDs(ids ...int) *UserUpdate {
 	uu.mutation.AddParticipantIDs(ids...)
 	return uu
 }
 
-// AddParticipants adds the "Participants" edges to the Participant entity.
+// AddParticipants adds the "participants" edges to the Participant entity.
 func (uu *UserUpdate) AddParticipants(p ...*Participant) *UserUpdate {
 	ids := make([]int, len(p))
 	for i := range p {
@@ -60,19 +60,19 @@ func (uu *UserUpdate) Mutation() *UserMutation {
 	return uu.mutation
 }
 
-// ClearParticipants clears all "Participants" edges to the Participant entity.
+// ClearParticipants clears all "participants" edges to the Participant entity.
 func (uu *UserUpdate) ClearParticipants() *UserUpdate {
 	uu.mutation.ClearParticipants()
 	return uu
 }
 
-// RemoveParticipantIDs removes the "Participants" edge to Participant entities by IDs.
+// RemoveParticipantIDs removes the "participants" edge to Participant entities by IDs.
 func (uu *UserUpdate) RemoveParticipantIDs(ids ...int) *UserUpdate {
 	uu.mutation.RemoveParticipantIDs(ids...)
 	return uu
 }
 
-// RemoveParticipants removes "Participants" edges to Participant entities.
+// RemoveParticipants removes "participants" edges to Participant entities.
 func (uu *UserUpdate) RemoveParticipants(p ...*Participant) *UserUpdate {
 	ids := make([]int, len(p))
 	for i := range p {
@@ -200,13 +200,13 @@ func (uuo *UserUpdateOne) SetPassword(s string) *UserUpdateOne {
 	return uuo
 }
 
-// AddParticipantIDs adds the "Participants" edge to the Participant entity by IDs.
+// AddParticipantIDs adds the "participants" edge to the Participant entity by IDs.
 func (uuo *UserUpdateOne) AddParticipantIDs(ids ...int) *UserUpdateOne {
 	uuo.mutation.AddParticipantIDs(ids...)
 	return uuo
 }
 
-// AddParticipants adds the "Participants" edges to the Participant entity.
+// AddParticipants adds the "participants" edges to the Participant entity.
 func (uuo *UserUpdateOne) AddParticipants(p ...*Participant) *UserUpdateOne {
 	ids := make([]int, len(p))
 	for i := range p {
@@ -220,19 +220,19 @@ func (uuo *UserUpdateOne) Mutation() *UserMutation {
 	return uuo.mutation
 }
 
-// ClearParticipants clears all "Participants" edges to the Participant entity.
+// ClearParticipants clears all "participants" edges to the Participant entity.
 func (uuo *UserUpdateOne) ClearParticipants() *UserUpdateOne {
 	uuo.mutation.ClearParticipants()
 	return uuo
 }
 
-// RemoveParticipantIDs removes the "Participants" edge to Participant entities by IDs.
+// RemoveParticipantIDs removes the "participants" edge to Participant entities by IDs.
 func (uuo *UserUpdateOne) RemoveParticipantIDs(ids ...int) *UserUpdateOne {
 	uuo.mutation.RemoveParticipantIDs(ids...)
 	return uuo
 }
 
-// RemoveParticipants removes "Participants" edges to Participant entities.
+// RemoveParticipants removes "participants" edges to Participant entities.
 func (uuo *UserUpdateOne) RemoveParticipants(p ...*Participant) *UserUpdateOne {
 	ids := make([]int, len(p))
 	for i := range p {

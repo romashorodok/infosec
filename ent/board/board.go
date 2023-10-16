@@ -12,10 +12,14 @@ const (
 	Label = "board"
 	// FieldID holds the string denoting the id field in the database.
 	FieldID = "id"
+	// FieldTitle holds the string denoting the title field in the database.
+	FieldTitle = "title"
 	// EdgeTasks holds the string denoting the tasks edge name in mutations.
 	EdgeTasks = "tasks"
 	// EdgeParticipants holds the string denoting the participants edge name in mutations.
 	EdgeParticipants = "participants"
+	// EdgePillars holds the string denoting the pillars edge name in mutations.
+	EdgePillars = "pillars"
 	// Table holds the table name of the board in the database.
 	Table = "boards"
 	// TasksTable is the table that holds the tasks relation/edge.
@@ -30,11 +34,19 @@ const (
 	// ParticipantsInverseTable is the table name for the Participant entity.
 	// It exists in this package in order to avoid circular dependency with the "participant" package.
 	ParticipantsInverseTable = "participants"
+	// PillarsTable is the table that holds the pillars relation/edge.
+	PillarsTable = "pillars"
+	// PillarsInverseTable is the table name for the Pillar entity.
+	// It exists in this package in order to avoid circular dependency with the "pillar" package.
+	PillarsInverseTable = "pillars"
+	// PillarsColumn is the table column denoting the pillars relation/edge.
+	PillarsColumn = "board_pillars"
 )
 
 // Columns holds all SQL columns for board fields.
 var Columns = []string{
 	FieldID,
+	FieldTitle,
 }
 
 var (
@@ -59,6 +71,11 @@ type OrderOption func(*sql.Selector)
 // ByID orders the results by the id field.
 func ByID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldID, opts...).ToFunc()
+}
+
+// ByTitle orders the results by the title field.
+func ByTitle(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldTitle, opts...).ToFunc()
 }
 
 // ByTasksCount orders the results by tasks count.
@@ -88,6 +105,20 @@ func ByParticipants(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newParticipantsStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
+
+// ByPillarsCount orders the results by pillars count.
+func ByPillarsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newPillarsStep(), opts...)
+	}
+}
+
+// ByPillars orders the results by pillars terms.
+func ByPillars(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newPillarsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
 func newTasksStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -100,5 +131,12 @@ func newParticipantsStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(ParticipantsInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.M2M, false, ParticipantsTable, ParticipantsPrimaryKey...),
+	)
+}
+func newPillarsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(PillarsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, PillarsTable, PillarsColumn),
 	)
 }

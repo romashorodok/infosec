@@ -8,9 +8,11 @@ import (
 
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/google/uuid"
 	"github.com/romashorodok/infosec/ent/board"
 	"github.com/romashorodok/infosec/ent/participant"
 	"github.com/romashorodok/infosec/ent/task"
+	"github.com/romashorodok/infosec/ent/user"
 )
 
 // ParticipantCreate is the builder for creating a Participant entity.
@@ -48,6 +50,25 @@ func (pc *ParticipantCreate) AddTasks(t ...*Task) *ParticipantCreate {
 		ids[i] = t[i].ID
 	}
 	return pc.AddTaskIDs(ids...)
+}
+
+// SetUserID sets the "user" edge to the User entity by ID.
+func (pc *ParticipantCreate) SetUserID(id uuid.UUID) *ParticipantCreate {
+	pc.mutation.SetUserID(id)
+	return pc
+}
+
+// SetNillableUserID sets the "user" edge to the User entity by ID if the given value is not nil.
+func (pc *ParticipantCreate) SetNillableUserID(id *uuid.UUID) *ParticipantCreate {
+	if id != nil {
+		pc = pc.SetUserID(*id)
+	}
+	return pc
+}
+
+// SetUser sets the "user" edge to the User entity.
+func (pc *ParticipantCreate) SetUser(u *User) *ParticipantCreate {
+	return pc.SetUserID(u.ID)
 }
 
 // Mutation returns the ParticipantMutation object of the builder.
@@ -140,6 +161,23 @@ func (pc *ParticipantCreate) createSpec() (*Participant, *sqlgraph.CreateSpec) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := pc.mutation.UserIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   participant.UserTable,
+			Columns: []string{participant.UserColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.user_participants = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

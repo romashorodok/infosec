@@ -1,4 +1,5 @@
 import { accessToken, canAccessProtectedRoutes, identity } from "$lib/stores/auth";
+import { fetchIntercepted } from "$lib/utils/fetch";
 import type { LayoutLoad } from "./$types";
 
 export const load: LayoutLoad = async ({ data }) => {
@@ -7,5 +8,7 @@ export const load: LayoutLoad = async ({ data }) => {
 	identity.set(data.identity);
 
 	return {
+		fetch: fetchIntercepted(),
+		boards: data?.boards ? data.boards : null
 	}
 }

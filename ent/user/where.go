@@ -194,7 +194,7 @@ func PasswordContainsFold(v string) predicate.User {
 	return predicate.User(sql.FieldContainsFold(FieldPassword, v))
 }
 
-// HasParticipants applies the HasEdge predicate on the "Participants" edge.
+// HasParticipants applies the HasEdge predicate on the "participants" edge.
 func HasParticipants() predicate.User {
 	return predicate.User(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
@@ -205,7 +205,7 @@ func HasParticipants() predicate.User {
 	})
 }
 
-// HasParticipantsWith applies the HasEdge predicate on the "Participants" edge with a given conditions (other predicates).
+// HasParticipantsWith applies the HasEdge predicate on the "participants" edge with a given conditions (other predicates).
 func HasParticipantsWith(preds ...predicate.Participant) predicate.User {
 	return predicate.User(func(s *sql.Selector) {
 		step := newParticipantsStep()

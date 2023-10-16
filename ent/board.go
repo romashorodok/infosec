@@ -13,9 +13,11 @@ import (
 
 // Board is the model entity for the Board schema.
 type Board struct {
-	config
+	config `json:"-"`
 	// ID of the ent.
 	ID int `json:"id,omitempty"`
+	// Title holds the value of the "title" field.
+	Title string `json:"title,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the BoardQuery when eager-loading is set.
 	Edges        BoardEdges `json:"edges"`
@@ -28,9 +30,11 @@ type BoardEdges struct {
 	Tasks []*Task `json:"tasks,omitempty"`
 	// Participants holds the value of the participants edge.
 	Participants []*Participant `json:"participants,omitempty"`
+	// Pillars holds the value of the pillars edge.
+	Pillars []*Pillar `json:"pillars,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [2]bool
+	loadedTypes [3]bool
 }
 
 // TasksOrErr returns the Tasks value or an error if the edge
@@ -51,6 +55,15 @@ func (e BoardEdges) ParticipantsOrErr() ([]*Participant, error) {
 	return nil, &NotLoadedError{edge: "participants"}
 }
 
+// PillarsOrErr returns the Pillars value or an error if the edge
+// was not loaded in eager-loading.
+func (e BoardEdges) PillarsOrErr() ([]*Pillar, error) {
+	if e.loadedTypes[2] {
+		return e.Pillars, nil
+	}
+	return nil, &NotLoadedError{edge: "pillars"}
+}
+
 // scanValues returns the types for scanning values from sql.Rows.
 func (*Board) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
@@ -58,6 +71,8 @@ func (*Board) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case board.FieldID:
 			values[i] = new(sql.NullInt64)
+		case board.FieldTitle:
+			values[i] = new(sql.NullString)
 		default:
 			values[i] = new(sql.UnknownType)
 		}
@@ -79,6 +94,12 @@ func (b *Board) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field id", value)
 			}
 			b.ID = int(value.Int64)
+		case board.FieldTitle:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field title", values[i])
+			} else if value.Valid {
+				b.Title = value.String
+			}
 		default:
 			b.selectValues.Set(columns[i], values[i])
 		}
@@ -100,6 +121,11 @@ func (b *Board) QueryTasks() *TaskQuery {
 // QueryParticipants queries the "participants" edge of the Board entity.
 func (b *Board) QueryParticipants() *ParticipantQuery {
 	return NewBoardClient(b.config).QueryParticipants(b)
+}
+
+// QueryPillars queries the "pillars" edge of the Board entity.
+func (b *Board) QueryPillars() *PillarQuery {
+	return NewBoardClient(b.config).QueryPillars(b)
 }
 
 // Update returns a builder for updating this Board.
@@ -124,7 +150,9 @@ func (b *Board) Unwrap() *Board {
 func (b *Board) String() string {
 	var builder strings.Builder
 	builder.WriteString("Board(")
-	builder.WriteString(fmt.Sprintf("id=%v", b.ID))
+	builder.WriteString(fmt.Sprintf("id=%v, ", b.ID))
+	builder.WriteString("title=")
+	builder.WriteString(b.Title)
 	builder.WriteByte(')')
 	return builder.String()
 }

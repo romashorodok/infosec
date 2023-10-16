@@ -11,6 +11,7 @@ var (
 	// BoardsColumns holds the columns for the "boards" table.
 	BoardsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "title", Type: field.TypeString},
 	}
 	// BoardsTable holds the schema information for the "boards" table.
 	BoardsTable = &schema.Table{
@@ -40,7 +41,7 @@ var (
 		PrimaryKey: []*schema.Column{ParticipantsColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "participants_users_Participants",
+				Symbol:     "participants_users_participants",
 				Columns:    []*schema.Column{ParticipantsColumns[1]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.SetNull,
@@ -50,16 +51,26 @@ var (
 	// PillarsColumns holds the columns for the "pillars" table.
 	PillarsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "board_pillars", Type: field.TypeInt, Nullable: true},
 	}
 	// PillarsTable holds the schema information for the "pillars" table.
 	PillarsTable = &schema.Table{
 		Name:       "pillars",
 		Columns:    PillarsColumns,
 		PrimaryKey: []*schema.Column{PillarsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "pillars_boards_pillars",
+				Columns:    []*schema.Column{PillarsColumns[1]},
+				RefColumns: []*schema.Column{BoardsColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+		},
 	}
 	// TasksColumns holds the columns for the "tasks" table.
 	TasksColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "title", Type: field.TypeString},
 		{Name: "description", Type: field.TypeString, Size: 2147483647},
 		{Name: "board_tasks", Type: field.TypeInt, Nullable: true},
 		{Name: "pillar_tasks", Type: field.TypeInt, Nullable: true},
@@ -72,13 +83,13 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "tasks_boards_tasks",
-				Columns:    []*schema.Column{TasksColumns[2]},
+				Columns:    []*schema.Column{TasksColumns[3]},
 				RefColumns: []*schema.Column{BoardsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "tasks_pillars_tasks",
-				Columns:    []*schema.Column{TasksColumns[3]},
+				Columns:    []*schema.Column{TasksColumns[4]},
 				RefColumns: []*schema.Column{PillarsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
@@ -161,6 +172,7 @@ var (
 
 func init() {
 	ParticipantsTable.ForeignKeys[0].RefTable = UsersTable
+	PillarsTable.ForeignKeys[0].RefTable = BoardsTable
 	TasksTable.ForeignKeys[0].RefTable = BoardsTable
 	TasksTable.ForeignKeys[1].RefTable = PillarsTable
 	BoardParticipantsTable.ForeignKeys[0].RefTable = BoardsTable

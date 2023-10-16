@@ -13,6 +13,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/romashorodok/infosec/ent/board"
 	"github.com/romashorodok/infosec/ent/participant"
+	"github.com/romashorodok/infosec/ent/pillar"
 	"github.com/romashorodok/infosec/ent/predicate"
 	"github.com/romashorodok/infosec/ent/task"
 )
@@ -26,6 +27,7 @@ type BoardQuery struct {
 	predicates       []predicate.Board
 	withTasks        *TaskQuery
 	withParticipants *ParticipantQuery
+	withPillars      *PillarQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -99,6 +101,28 @@ func (bq *BoardQuery) QueryParticipants() *ParticipantQuery {
 			sqlgraph.From(board.Table, board.FieldID, selector),
 			sqlgraph.To(participant.Table, participant.FieldID),
 			sqlgraph.Edge(sqlgraph.M2M, false, board.ParticipantsTable, board.ParticipantsPrimaryKey...),
+		)
+		fromU = sqlgraph.SetNeighbors(bq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryPillars chains the current query on the "pillars" edge.
+func (bq *BoardQuery) QueryPillars() *PillarQuery {
+	query := (&PillarClient{config: bq.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := bq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := bq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(board.Table, board.FieldID, selector),
+			sqlgraph.To(pillar.Table, pillar.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, board.PillarsTable, board.PillarsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(bq.driver.Dialect(), step)
 		return fromU, nil
@@ -300,6 +324,7 @@ func (bq *BoardQuery) Clone() *BoardQuery {
 		predicates:       append([]predicate.Board{}, bq.predicates...),
 		withTasks:        bq.withTasks.Clone(),
 		withParticipants: bq.withParticipants.Clone(),
+		withPillars:      bq.withPillars.Clone(),
 		// clone intermediate query.
 		sql:  bq.sql.Clone(),
 		path: bq.path,
@@ -328,8 +353,31 @@ func (bq *BoardQuery) WithParticipants(opts ...func(*ParticipantQuery)) *BoardQu
 	return bq
 }
 
+// WithPillars tells the query-builder to eager-load the nodes that are connected to
+// the "pillars" edge. The optional arguments are used to configure the query builder of the edge.
+func (bq *BoardQuery) WithPillars(opts ...func(*PillarQuery)) *BoardQuery {
+	query := (&PillarClient{config: bq.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	bq.withPillars = query
+	return bq
+}
+
 // GroupBy is used to group vertices by one or more fields/columns.
 // It is often used with aggregate functions, like: count, max, mean, min, sum.
+//
+// Example:
+//
+//	var v []struct {
+//		Title string `json:"title,omitempty"`
+//		Count int `json:"count,omitempty"`
+//	}
+//
+//	client.Board.Query().
+//		GroupBy(board.FieldTitle).
+//		Aggregate(ent.Count()).
+//		Scan(ctx, &v)
 func (bq *BoardQuery) GroupBy(field string, fields ...string) *BoardGroupBy {
 	bq.ctx.Fields = append([]string{field}, fields...)
 	grbuild := &BoardGroupBy{build: bq}
@@ -341,6 +389,16 @@ func (bq *BoardQuery) GroupBy(field string, fields ...string) *BoardGroupBy {
 
 // Select allows the selection one or more fields/columns for the given query,
 // instead of selecting all fields in the entity.
+//
+// Example:
+//
+//	var v []struct {
+//		Title string `json:"title,omitempty"`
+//	}
+//
+//	client.Board.Query().
+//		Select(board.FieldTitle).
+//		Scan(ctx, &v)
 func (bq *BoardQuery) Select(fields ...string) *BoardSelect {
 	bq.ctx.Fields = append(bq.ctx.Fields, fields...)
 	sbuild := &BoardSelect{BoardQuery: bq}
@@ -384,9 +442,10 @@ func (bq *BoardQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Board,
 	var (
 		nodes       = []*Board{}
 		_spec       = bq.querySpec()
-		loadedTypes = [2]bool{
+		loadedTypes = [3]bool{
 			bq.withTasks != nil,
 			bq.withParticipants != nil,
+			bq.withPillars != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
@@ -418,6 +477,13 @@ func (bq *BoardQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Board,
 		if err := bq.loadParticipants(ctx, query, nodes,
 			func(n *Board) { n.Edges.Participants = []*Participant{} },
 			func(n *Board, e *Participant) { n.Edges.Participants = append(n.Edges.Participants, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := bq.withPillars; query != nil {
+		if err := bq.loadPillars(ctx, query, nodes,
+			func(n *Board) { n.Edges.Pillars = []*Pillar{} },
+			func(n *Board, e *Pillar) { n.Edges.Pillars = append(n.Edges.Pillars, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -513,6 +579,37 @@ func (bq *BoardQuery) loadParticipants(ctx context.Context, query *ParticipantQu
 		for kn := range nodes {
 			assign(kn, n)
 		}
+	}
+	return nil
+}
+func (bq *BoardQuery) loadPillars(ctx context.Context, query *PillarQuery, nodes []*Board, init func(*Board), assign func(*Board, *Pillar)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[int]*Board)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	query.Where(predicate.Pillar(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(board.PillarsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.board_pillars
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "board_pillars" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "board_pillars" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
 	}
 	return nil
 }

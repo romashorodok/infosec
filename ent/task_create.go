@@ -20,7 +20,13 @@ type TaskCreate struct {
 	hooks    []Hook
 }
 
-// SetDescription sets the "Description" field.
+// SetTitle sets the "title" field.
+func (tc *TaskCreate) SetTitle(s string) *TaskCreate {
+	tc.mutation.SetTitle(s)
+	return tc
+}
+
+// SetDescription sets the "description" field.
 func (tc *TaskCreate) SetDescription(s string) *TaskCreate {
 	tc.mutation.SetDescription(s)
 	return tc
@@ -75,8 +81,11 @@ func (tc *TaskCreate) ExecX(ctx context.Context) {
 
 // check runs all checks and user-defined validators on the builder.
 func (tc *TaskCreate) check() error {
+	if _, ok := tc.mutation.Title(); !ok {
+		return &ValidationError{Name: "title", err: errors.New(`ent: missing required field "Task.title"`)}
+	}
 	if _, ok := tc.mutation.Description(); !ok {
-		return &ValidationError{Name: "Description", err: errors.New(`ent: missing required field "Task.Description"`)}
+		return &ValidationError{Name: "description", err: errors.New(`ent: missing required field "Task.description"`)}
 	}
 	return nil
 }
@@ -104,6 +113,10 @@ func (tc *TaskCreate) createSpec() (*Task, *sqlgraph.CreateSpec) {
 		_node = &Task{config: tc.config}
 		_spec = sqlgraph.NewCreateSpec(task.Table, sqlgraph.NewFieldSpec(task.FieldID, field.TypeInt))
 	)
+	if value, ok := tc.mutation.Title(); ok {
+		_spec.SetField(task.FieldTitle, field.TypeString, value)
+		_node.Title = value
+	}
 	if value, ok := tc.mutation.Description(); ok {
 		_spec.SetField(task.FieldDescription, field.TypeString, value)
 		_node.Description = value

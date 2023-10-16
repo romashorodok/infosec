@@ -381,6 +381,22 @@ func (c *BoardClient) QueryParticipants(b *Board) *ParticipantQuery {
 	return query
 }
 
+// QueryPillars queries the pillars edge of a Board.
+func (c *BoardClient) QueryPillars(b *Board) *PillarQuery {
+	query := (&PillarClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := b.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(board.Table, board.FieldID, id),
+			sqlgraph.To(pillar.Table, pillar.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, board.PillarsTable, board.PillarsColumn),
+		)
+		fromV = sqlgraph.Neighbors(b.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *BoardClient) Hooks() []Hook {
 	return c.hooks.Board
@@ -672,6 +688,22 @@ func (c *ParticipantClient) QueryTasks(pa *Participant) *TaskQuery {
 			sqlgraph.From(participant.Table, participant.FieldID, id),
 			sqlgraph.To(task.Table, task.FieldID),
 			sqlgraph.Edge(sqlgraph.M2M, true, participant.TasksTable, participant.TasksPrimaryKey...),
+		)
+		fromV = sqlgraph.Neighbors(pa.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryUser queries the user edge of a Participant.
+func (c *ParticipantClient) QueryUser(pa *Participant) *UserQuery {
+	query := (&UserClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := pa.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(participant.Table, participant.FieldID, id),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, participant.UserTable, participant.UserColumn),
 		)
 		fromV = sqlgraph.Neighbors(pa.driver.Dialect(), step)
 		return fromV, nil
@@ -1110,7 +1142,7 @@ func (c *UserClient) GetX(ctx context.Context, id uuid.UUID) *User {
 	return obj
 }
 
-// QueryParticipants queries the Participants edge of a User.
+// QueryParticipants queries the participants edge of a User.
 func (c *UserClient) QueryParticipants(u *User) *ParticipantQuery {
 	query := (&ParticipantClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {

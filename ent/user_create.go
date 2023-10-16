@@ -47,13 +47,13 @@ func (uc *UserCreate) SetNillableID(u *uuid.UUID) *UserCreate {
 	return uc
 }
 
-// AddParticipantIDs adds the "Participants" edge to the Participant entity by IDs.
+// AddParticipantIDs adds the "participants" edge to the Participant entity by IDs.
 func (uc *UserCreate) AddParticipantIDs(ids ...int) *UserCreate {
 	uc.mutation.AddParticipantIDs(ids...)
 	return uc
 }
 
-// AddParticipants adds the "Participants" edges to the Participant entity.
+// AddParticipants adds the "participants" edges to the Participant entity.
 func (uc *UserCreate) AddParticipants(p ...*Participant) *UserCreate {
 	ids := make([]int, len(p))
 	for i := range p {

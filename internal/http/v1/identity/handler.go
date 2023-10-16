@@ -207,7 +207,7 @@ func (h *IdentityHandler) GetOption() httputils.HttpHandlerOption {
 			HandlerWithOptions(h, ChiServerOptions{
 				BaseRouter: mux,
 				Middlewares: []MiddlewareFunc{
-					h.handlerSpecValidator(spec),
+					// h.handlerSpecValidator(spec),
 					httputils.JsonMiddleware(),
 				},
 			})
@@ -222,10 +222,6 @@ type IdentityHandlerParams struct {
 
 	IdentitySvc identitysvc.IdentityService
 	SecuritySvc identitysecurtysvc.SecurityService
-
-	// Lifecycle     fx.Lifecycle
-	// Router        *chi.Mux
-	// FilterOptions openapi3filter.Options
 }
 
 func NewHandler(params IdentityHandlerParams) *IdentityHandler {
@@ -234,18 +230,4 @@ func NewHandler(params IdentityHandlerParams) *IdentityHandler {
 		identitySvc:          params.IdentitySvc,
 		securitySvc:          params.SecuritySvc,
 	}
-	// spec, err := GetSwagger()
-	// spec.Servers = nil
-	// if err != nil {
-	// 	log.Panicf("Uanble get openapi spec. %s", err)
-	// }
-
-	// params.Router.Use(openapi.NewOpenAPIRequestMiddleware(spec, &openapi.Options{
-	// 	Options: params.FilterOptions,
-	// }))
-
-	// HandlerFromMux(&IdentityHandler{
-	// 	identitySvc: params.IdentitySvc,
-	// 	securitySvc: params.SecuritySvc,
-	// }, params.Router)
 }

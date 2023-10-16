@@ -18,8 +18,9 @@ type Pillar struct {
 	ID int `json:"id,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the PillarQuery when eager-loading is set.
-	Edges        PillarEdges `json:"edges"`
-	selectValues sql.SelectValues
+	Edges         PillarEdges `json:"edges"`
+	board_pillars *int
+	selectValues  sql.SelectValues
 }
 
 // PillarEdges holds the relations/edges for other nodes in the graph.
@@ -47,6 +48,8 @@ func (*Pillar) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case pillar.FieldID:
 			values[i] = new(sql.NullInt64)
+		case pillar.ForeignKeys[0]: // board_pillars
+			values[i] = new(sql.NullInt64)
 		default:
 			values[i] = new(sql.UnknownType)
 		}
@@ -68,6 +71,13 @@ func (pi *Pillar) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field id", value)
 			}
 			pi.ID = int(value.Int64)
+		case pillar.ForeignKeys[0]:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for edge-field board_pillars", value)
+			} else if value.Valid {
+				pi.board_pillars = new(int)
+				*pi.board_pillars = int(value.Int64)
+			}
 		default:
 			pi.selectValues.Set(columns[i], values[i])
 		}

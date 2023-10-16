@@ -61,7 +61,7 @@ func (uq *UserQuery) Order(o ...user.OrderOption) *UserQuery {
 	return uq
 }
 
-// QueryParticipants chains the current query on the "Participants" edge.
+// QueryParticipants chains the current query on the "participants" edge.
 func (uq *UserQuery) QueryParticipants() *ParticipantQuery {
 	query := (&ParticipantClient{config: uq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
@@ -283,7 +283,7 @@ func (uq *UserQuery) Clone() *UserQuery {
 }
 
 // WithParticipants tells the query-builder to eager-load the nodes that are connected to
-// the "Participants" edge. The optional arguments are used to configure the query builder of the edge.
+// the "participants" edge. The optional arguments are used to configure the query builder of the edge.
 func (uq *UserQuery) WithParticipants(opts ...func(*ParticipantQuery)) *UserQuery {
 	query := (&ParticipantClient{config: uq.config}).Query()
 	for _, opt := range opts {

@@ -16,6 +16,7 @@
         "description": "List Boards.",
         "tags": [
           "Board"
+
         ],
         "operationId": "listBoard",
         "parameters": [
@@ -46,7 +47,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/Board575590982View"
+                    "$ref": "#/components/schemas/Board1801851120View"
                   }
                 }
               }
@@ -81,8 +82,18 @@
             "application/json": {
               "schema": {
                 "type": "object",
+                "required": [
+                  "title"
+                ],
                 "properties": {
                   "participants": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer",
+                      "format": "int32"
+                    }
+                  },
+                  "pillars": {
                     "type": "array",
                     "items": {
                       "type": "integer",
@@ -95,6 +106,9 @@
                       "type": "integer",
                       "format": "int32"
                     }
+                  },
+                  "title": {
+                    "type": "string"
                   }
                 }
               }
@@ -107,7 +121,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Board575590982View"
+                  "$ref": "#/components/schemas/Board1801851120View"
                 }
               }
             }
@@ -152,7 +166,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Board575590982View"
+                  "$ref": "#/components/schemas/Board1801851120View"
                 }
               }
             }
@@ -237,8 +251,18 @@
             "application/json": {
               "schema": {
                 "type": "object",
+                "required": [
+                  "title"
+                ],
                 "properties": {
                   "participants": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer",
+                      "format": "int32"
+                    }
+                  },
+                  "pillars": {
                     "type": "array",
                     "items": {
                       "type": "integer",
@@ -251,6 +275,9 @@
                       "type": "integer",
                       "format": "int32"
                     }
+                  },
+                  "title": {
+                    "type": "string"
                   }
                 }
               }
@@ -263,7 +290,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Board575590982View"
+                  "$ref": "#/components/schemas/Board1801851120View"
                 }
               }
             }
@@ -286,6 +313,102 @@
       }
     },
     "/boards/{id}/participants": {
+
+  "post": {
+    "summary": "Add a Participant to the Board",
+    "description": "Add a new Participant to the Board with the given ID",
+    "tags": ["Board"],
+    "operationId": "addBoardParticipant",
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "description": "ID of the Board",
+        "required": true,
+        "schema": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    ],
+    "requestBody": {
+      "description": "Participant object to add to the board",
+      "required": true,
+      "content": {
+        "application/json": {
+          "schema": {
+            "$ref": "#/components/schemas/ParticipantBoard"
+          }
+        }
+      }
+    },
+    "responses": {
+      "201": {
+        "description": "Participant added to the Board",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ParticipantBoard"
+            }
+          }
+        }
+      },
+      "400": {
+        "$ref": "#/components/responses/400"
+      },
+      "404": {
+        "$ref": "#/components/responses/404"
+      },
+      "500": {
+        "$ref": "#/components/responses/500"
+      }
+    },
+"security": [
+		  {
+		      "BearerAuth": []
+		  }
+	      ]
+
+  },
+"delete": {
+  "summary": "Delete a Participant to the Board",
+  "description": "Delete a Participant to the Board",
+  "tags": ["Board"],
+  "operationId": "removeBoardParticipant",
+  "parameters": [
+    {
+      "name": "id",
+      "in": "path",
+      "description": "ID of the Board",
+      "required": true,
+      "schema": {
+        "type": "integer",
+        "format": "int32"
+      }
+    },
+    {
+      "name": "user_id",
+      "in": "query",
+      "description": "ID of the Participant to be removed",
+      "required": true,
+      "schema": {
+        "type": "string",
+        "format": "uuid"
+      }
+    }
+  ],
+  "responses": {
+    "200": {
+      "description": "Participant removed from the Board"
+    }
+  },
+"security": [
+		  {
+		      "BearerAuth": []
+		  }
+	      ]
+},
+
       "get": {
         "summary": "Find the attached Participants",
         "description": "Find the attached Participants of the Board with the given ID",
@@ -349,7 +472,228 @@
         }
       }
     },
+    "/boards/{id}/pillars": {
+	"post": {
+	    "summary": "Add a Pillar to the Board",
+	    "description": "Add a new Pillar to the Board with the given ID",
+	    "tags": ["Board"],
+	    "operationId": "addBoardPillar",
+	    "parameters": [
+		{
+		    "name": "id",
+		    "in": "path",
+		    "description": "ID of the Board",
+		    "required": true,
+		    "schema": {
+			"type": "integer",
+			"format": "int32"
+		    }
+		}
+	    ],
+	    "responses": {
+		"200": {
+		    "description": "Pillar added to the Board",
+		}
+	    }
+	},
+"delete": {
+  "summary": "Remove a Pillar from the Board",
+  "description": "Remove a Pillar from the Board with the given ID",
+  "tags": ["Board"],
+  "operationId": "removeBoardPillar",
+  "parameters": [
+    {
+      "name": "id",
+      "in": "path",
+      "description": "ID of the Board",
+      "required": true,
+      "schema": {
+        "type": "integer",
+        "format": "int32"
+      }
+    },
+    {
+      "name": "pillar_id",
+      "in": "query",
+      "description": "ID of the Pillar to be removed",
+      "required": true,
+      "schema": {
+        "type": "integer",
+        "format": "int32"
+      }
+    }
+  ],
+  "responses": {
+    "200": {
+      "description": "Pillar removed from the Board"
+    }
+  }
+},
+
+      "get": {
+        "summary": "Find the attached Pillars",
+        "description": "Find the attached Pillars of the Board with the given ID",
+        "tags": [
+          "Board"
+        ],
+        "operationId": "listBoardPillars",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "what page to render",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "itemsPerPage",
+            "in": "query",
+            "description": "item count to render per page",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "description": "ID of the Board",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Pillars attached to Board with requested ID was found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Pillar2836507524View"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
     "/boards/{id}/tasks": {
+
+
+"post": {
+  "summary": "Add a Task to the Board",
+  "description": "Add a new Task to the Board with the given ID",
+  "tags": ["Board"],
+  "operationId": "addBoardTask",
+  "parameters": [
+    {
+      "name": "id",
+      "in": "path",
+      "description": "ID of the Board",
+      "required": true,
+      "schema": {
+        "type": "integer",
+        "format": "int32"
+      }
+    },
+    {
+      "name": "pillar_id",
+      "in": "query",
+      "description": "ID of the Pillar to be added",
+      "required": true,
+      "schema": {
+        "type": "integer",
+        "format": "int32"
+      }
+    }
+  ],
+  "requestBody": {
+    "description": "Task to be added to the Board",
+    "required": true,
+    "content": {
+      "application/json": {
+        "schema": {
+          "type": "object",
+          "properties": {
+            "title": {
+              "type": "string",
+              "description": "Title of the Task"
+            },
+            "description": {
+              "type": "string",
+              "description": "Description of the Task"
+            }
+          }
+        }
+      }
+    }
+  },
+  "responses": {
+    "200": {
+      "description": "Task added to the Board"
+    }
+  },
+  "security": [
+    {
+      "BearerAuth": []
+    }
+  ]
+},
+
+  "delete": {
+    "summary": "Remove a Task from the Board",
+    "description": "Remove a Task from the Board with the given ID",
+    "tags": ["Board"],
+    "operationId": "removeBoardTask",
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "description": "ID of the Board",
+        "required": true,
+        "schema": {
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      {
+        "name": "task_id",
+        "in": "query",
+        "description": "ID of the Task to be removed",
+        "required": true,
+        "schema": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    ],
+    "responses": {
+      "200": {
+        "description": "Task removed from the Board"
+      }
+    },
+    "security": [
+      {
+        "BearerAuth": []
+      }
+    ]
+  },
       "get": {
         "summary": "Find the attached Tasks",
         "description": "Find the attached Tasks of the Board with the given ID",
@@ -395,7 +739,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/Task3686756101View"
+                    "$ref": "#/components/schemas/Task3595956673View"
                   }
                 }
               }
@@ -979,7 +1323,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/Board575590982View"
+                    "$ref": "#/components/schemas/Board1801851120View"
                   }
                 }
               }
@@ -1043,7 +1387,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/Task3686756101View"
+                    "$ref": "#/components/schemas/Task3595956673View"
                   }
                 }
               }
@@ -1368,7 +1712,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/Task3686756101View"
+                    "$ref": "#/components/schemas/Task3595956673View"
                   }
                 }
               }
@@ -1422,7 +1766,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/Task3686756101View"
+                    "$ref": "#/components/schemas/Task3595956673View"
                   }
                 }
               }
@@ -1458,10 +1802,11 @@
               "schema": {
                 "type": "object",
                 "required": [
-                  "Description"
+                  "description",
+                  "title"
                 ],
                 "properties": {
-                  "Description": {
+                  "description": {
                     "type": "string"
                   },
                   "participants": {
@@ -1470,6 +1815,9 @@
                       "type": "integer",
                       "format": "int32"
                     }
+                  },
+                  "title": {
+                    "type": "string"
                   }
                 }
               }
@@ -1482,7 +1830,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Task3686756101View"
+                  "$ref": "#/components/schemas/Task3595956673View"
                 }
               }
             }
@@ -1527,7 +1875,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Task3686756101View"
+                  "$ref": "#/components/schemas/Task3595956673View"
                 }
               }
             }
@@ -1613,10 +1961,11 @@
               "schema": {
                 "type": "object",
                 "required": [
-                  "Description"
+                  "description",
+                  "title"
                 ],
                 "properties": {
-                  "Description": {
+                  "description": {
                     "type": "string"
                   },
                   "participants": {
@@ -1625,6 +1974,9 @@
                       "type": "integer",
                       "format": "int32"
                     }
+                  },
+                  "title": {
+                    "type": "string"
                   }
                 }
               }
@@ -1637,7 +1989,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Task3686756101View"
+                  "$ref": "#/components/schemas/Task3595956673View"
                 }
               }
             }
@@ -2001,6 +2353,45 @@
         ]
       }
     },
+    "/users/boards": {
+"get": {
+  "summary": "Get all User Boards",
+  "description": "Get all boards belonging to the user.",
+  "tags": ["User Boards"],
+  "operationId": "getUserBoards",
+  "responses": {
+    "200": {
+      "description": "List of user boards",
+      "content": {
+        "application/json": {
+          "schema": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "board_id": {
+                  "type": "integer",
+                  "format": "int32",
+                  "description": "ID of the Board"
+                },
+                "name": {
+                  "type": "string",
+                  "description": "Name of the Board"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "security": [
+    {
+      "BearerAuth": []
+    }
+	  ]
+  }
+    },
     "/users/{id}/participants": {
       "get": {
         "summary": "Find the attached Participants",
@@ -2067,15 +2458,33 @@
   },
   "components": {
     "schemas": {
-      "Board575590982View": {
+
+      "ParticipantBoard": {
+        "type": "object",
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": ["user_id"]
+      },
+    
+
+
+      "Board1801851120View": {
         "type": "object",
         "required": [
-          "id"
+          "id",
+          "title"
         ],
         "properties": {
           "id": {
             "type": "integer",
             "format": "int32"
+          },
+          "title": {
+            "type": "string"
           }
         }
       },
@@ -2115,19 +2524,23 @@
           }
         }
       },
-      "Task3686756101View": {
+      "Task3595956673View": {
         "type": "object",
         "required": [
-          "Description",
-          "id"
+          "description",
+          "id",
+          "title"
         ],
         "properties": {
-          "Description": {
+          "description": {
             "type": "string"
           },
           "id": {
             "type": "integer",
             "format": "int32"
+          },
+          "title": {
+            "type": "string"
           }
         }
       },

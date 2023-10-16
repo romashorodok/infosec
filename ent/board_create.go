@@ -4,12 +4,14 @@ package ent
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/romashorodok/infosec/ent/board"
 	"github.com/romashorodok/infosec/ent/participant"
+	"github.com/romashorodok/infosec/ent/pillar"
 	"github.com/romashorodok/infosec/ent/task"
 )
 
@@ -18,6 +20,12 @@ type BoardCreate struct {
 	config
 	mutation *BoardMutation
 	hooks    []Hook
+}
+
+// SetTitle sets the "title" field.
+func (bc *BoardCreate) SetTitle(s string) *BoardCreate {
+	bc.mutation.SetTitle(s)
+	return bc
 }
 
 // AddTaskIDs adds the "tasks" edge to the Task entity by IDs.
@@ -48,6 +56,21 @@ func (bc *BoardCreate) AddParticipants(p ...*Participant) *BoardCreate {
 		ids[i] = p[i].ID
 	}
 	return bc.AddParticipantIDs(ids...)
+}
+
+// AddPillarIDs adds the "pillars" edge to the Pillar entity by IDs.
+func (bc *BoardCreate) AddPillarIDs(ids ...int) *BoardCreate {
+	bc.mutation.AddPillarIDs(ids...)
+	return bc
+}
+
+// AddPillars adds the "pillars" edges to the Pillar entity.
+func (bc *BoardCreate) AddPillars(p ...*Pillar) *BoardCreate {
+	ids := make([]int, len(p))
+	for i := range p {
+		ids[i] = p[i].ID
+	}
+	return bc.AddPillarIDs(ids...)
 }
 
 // Mutation returns the BoardMutation object of the builder.
@@ -84,6 +107,9 @@ func (bc *BoardCreate) ExecX(ctx context.Context) {
 
 // check runs all checks and user-defined validators on the builder.
 func (bc *BoardCreate) check() error {
+	if _, ok := bc.mutation.Title(); !ok {
+		return &ValidationError{Name: "title", err: errors.New(`ent: missing required field "Board.title"`)}
+	}
 	return nil
 }
 
@@ -110,6 +136,10 @@ func (bc *BoardCreate) createSpec() (*Board, *sqlgraph.CreateSpec) {
 		_node = &Board{config: bc.config}
 		_spec = sqlgraph.NewCreateSpec(board.Table, sqlgraph.NewFieldSpec(board.FieldID, field.TypeInt))
 	)
+	if value, ok := bc.mutation.Title(); ok {
+		_spec.SetField(board.FieldTitle, field.TypeString, value)
+		_node.Title = value
+	}
 	if nodes := bc.mutation.TasksIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
@@ -135,6 +165,22 @@ func (bc *BoardCreate) createSpec() (*Board, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(participant.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := bc.mutation.PillarsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   board.PillarsTable,
+			Columns: []string{board.PillarsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(pillar.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {

@@ -16,8 +16,10 @@ type Task struct {
 	config `json:"-"`
 	// ID of the ent.
 	ID int `json:"id,omitempty"`
-	// Description holds the value of the "Description" field.
-	Description string `json:"Description,omitempty"`
+	// Title holds the value of the "title" field.
+	Title string `json:"title,omitempty"`
+	// Description holds the value of the "description" field.
+	Description string `json:"description,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the TaskQuery when eager-loading is set.
 	Edges        TaskEdges `json:"edges"`
@@ -51,7 +53,7 @@ func (*Task) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case task.FieldID:
 			values[i] = new(sql.NullInt64)
-		case task.FieldDescription:
+		case task.FieldTitle, task.FieldDescription:
 			values[i] = new(sql.NullString)
 		case task.ForeignKeys[0]: // board_tasks
 			values[i] = new(sql.NullInt64)
@@ -78,9 +80,15 @@ func (t *Task) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field id", value)
 			}
 			t.ID = int(value.Int64)
+		case task.FieldTitle:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field title", values[i])
+			} else if value.Valid {
+				t.Title = value.String
+			}
 		case task.FieldDescription:
 			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field Description", values[i])
+				return fmt.Errorf("unexpected type %T for field description", values[i])
 			} else if value.Valid {
 				t.Description = value.String
 			}
@@ -139,7 +147,10 @@ func (t *Task) String() string {
 	var builder strings.Builder
 	builder.WriteString("Task(")
 	builder.WriteString(fmt.Sprintf("id=%v, ", t.ID))
-	builder.WriteString("Description=")
+	builder.WriteString("title=")
+	builder.WriteString(t.Title)
+	builder.WriteString(", ")
+	builder.WriteString("description=")
 	builder.WriteString(t.Description)
 	builder.WriteByte(')')
 	return builder.String()

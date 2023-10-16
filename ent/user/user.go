@@ -18,15 +18,15 @@ const (
 	// FieldPassword holds the string denoting the password field in the database.
 	FieldPassword = "password"
 	// EdgeParticipants holds the string denoting the participants edge name in mutations.
-	EdgeParticipants = "Participants"
+	EdgeParticipants = "participants"
 	// Table holds the table name of the user in the database.
 	Table = "users"
-	// ParticipantsTable is the table that holds the Participants relation/edge.
+	// ParticipantsTable is the table that holds the participants relation/edge.
 	ParticipantsTable = "participants"
 	// ParticipantsInverseTable is the table name for the Participant entity.
 	// It exists in this package in order to avoid circular dependency with the "participant" package.
 	ParticipantsInverseTable = "participants"
-	// ParticipantsColumn is the table column denoting the Participants relation/edge.
+	// ParticipantsColumn is the table column denoting the participants relation/edge.
 	ParticipantsColumn = "user_participants"
 )
 
@@ -70,14 +70,14 @@ func ByPassword(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldPassword, opts...).ToFunc()
 }
 
-// ByParticipantsCount orders the results by Participants count.
+// ByParticipantsCount orders the results by participants count.
 func ByParticipantsCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
 		sqlgraph.OrderByNeighborsCount(s, newParticipantsStep(), opts...)
 	}
 }
 
-// ByParticipants orders the results by Participants terms.
+// ByParticipants orders the results by participants terms.
 func ByParticipants(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	return func(s *sql.Selector) {
 		sqlgraph.OrderByNeighborTerms(s, newParticipantsStep(), append([]sql.OrderTerm{term}, terms...)...)

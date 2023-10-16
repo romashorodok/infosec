@@ -35,6 +35,7 @@
 
 	async function OnLogin(e: CustomEvent<Schema>) {
 		const payload = e.detail;
+		console.log(payload)
 		login(payload);
 	}
 </script>

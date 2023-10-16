@@ -299,12 +299,12 @@ func (tq *TaskQuery) WithParticipants(opts ...func(*ParticipantQuery)) *TaskQuer
 // Example:
 //
 //	var v []struct {
-//		Description string `json:"Description,omitempty"`
+//		Title string `json:"title,omitempty"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
 //	client.Task.Query().
-//		GroupBy(task.FieldDescription).
+//		GroupBy(task.FieldTitle).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (tq *TaskQuery) GroupBy(field string, fields ...string) *TaskGroupBy {
@@ -322,11 +322,11 @@ func (tq *TaskQuery) GroupBy(field string, fields ...string) *TaskGroupBy {
 // Example:
 //
 //	var v []struct {
-//		Description string `json:"Description,omitempty"`
+//		Title string `json:"title,omitempty"`
 //	}
 //
 //	client.Task.Query().
-//		Select(task.FieldDescription).
+//		Select(task.FieldTitle).
 //		Scan(ctx, &v)
 func (tq *TaskQuery) Select(fields ...string) *TaskSelect {
 	tq.ctx.Fields = append(tq.ctx.Fields, fields...)

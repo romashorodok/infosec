@@ -17,15 +17,17 @@ import (
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/go-chi/chi/v5"
 	"github.com/oapi-codegen/runtime"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
 const (
 	BearerAuthScopes = "BearerAuth.Scopes"
 )
 
-// Board575590982View defines model for Board575590982View.
-type Board575590982View struct {
-	Id int32 `json:"id"`
+// Board1801851120View defines model for Board1801851120View.
+type Board1801851120View struct {
+	Id    int32  `json:"id"`
+	Title string `json:"title"`
 }
 
 // Grant3830068376View defines model for Grant3830068376View.
@@ -38,15 +40,21 @@ type Participant3207254963View struct {
 	Id int32 `json:"id"`
 }
 
+// ParticipantBoard defines model for ParticipantBoard.
+type ParticipantBoard struct {
+	UserId openapi_types.UUID `json:"user_id"`
+}
+
 // Pillar2836507524View defines model for Pillar2836507524View.
 type Pillar2836507524View struct {
 	Id int32 `json:"id"`
 }
 
-// Task3686756101View defines model for Task3686756101View.
-type Task3686756101View struct {
-	Description string `json:"Description"`
+// Task3595956673View defines model for Task3595956673View.
+type Task3595956673View struct {
+	Description string `json:"description"`
 	Id          int32  `json:"id"`
+	Title       string `json:"title"`
 }
 
 // User1841989870View defines model for User1841989870View.
@@ -89,13 +97,23 @@ type ListBoardParams struct {
 // CreateBoardJSONBody defines parameters for CreateBoard.
 type CreateBoardJSONBody struct {
 	Participants *[]int32 `json:"participants,omitempty"`
+	Pillars      *[]int32 `json:"pillars,omitempty"`
 	Tasks        *[]int32 `json:"tasks,omitempty"`
+	Title        string   `json:"title"`
 }
 
 // UpdateBoardJSONBody defines parameters for UpdateBoard.
 type UpdateBoardJSONBody struct {
 	Participants *[]int32 `json:"participants,omitempty"`
+	Pillars      *[]int32 `json:"pillars,omitempty"`
 	Tasks        *[]int32 `json:"tasks,omitempty"`
+	Title        string   `json:"title"`
+}
+
+// RemoveBoardParticipantParams defines parameters for RemoveBoardParticipant.
+type RemoveBoardParticipantParams struct {
+	// UserId ID of the Participant to be removed
+	UserId openapi_types.UUID `form:"user_id" json:"user_id"`
 }
 
 // ListBoardParticipantsParams defines parameters for ListBoardParticipants.
@@ -107,6 +125,27 @@ type ListBoardParticipantsParams struct {
 	ItemsPerPage *int32 `form:"itemsPerPage,omitempty" json:"itemsPerPage,omitempty"`
 }
 
+// RemoveBoardPillarParams defines parameters for RemoveBoardPillar.
+type RemoveBoardPillarParams struct {
+	// PillarId ID of the Pillar to be removed
+	PillarId int32 `form:"pillar_id" json:"pillar_id"`
+}
+
+// ListBoardPillarsParams defines parameters for ListBoardPillars.
+type ListBoardPillarsParams struct {
+	// Page what page to render
+	Page *int32 `form:"page,omitempty" json:"page,omitempty"`
+
+	// ItemsPerPage item count to render per page
+	ItemsPerPage *int32 `form:"itemsPerPage,omitempty" json:"itemsPerPage,omitempty"`
+}
+
+// RemoveBoardTaskParams defines parameters for RemoveBoardTask.
+type RemoveBoardTaskParams struct {
+	// TaskId ID of the Task to be removed
+	TaskId int32 `form:"task_id" json:"task_id"`
+}
+
 // ListBoardTasksParams defines parameters for ListBoardTasks.
 type ListBoardTasksParams struct {
 	// Page what page to render
@@ -114,6 +153,21 @@ type ListBoardTasksParams struct {
 
 	// ItemsPerPage item count to render per page
 	ItemsPerPage *int32 `form:"itemsPerPage,omitempty" json:"itemsPerPage,omitempty"`
+}
+
+// AddBoardTaskJSONBody defines parameters for AddBoardTask.
+type AddBoardTaskJSONBody struct {
+	// Description Description of the Task
+	Description *string `json:"description,omitempty"`
+
+	// Title Title of the Task
+	Title *string `json:"title,omitempty"`
+}
+
+// AddBoardTaskParams defines parameters for AddBoardTask.
+type AddBoardTaskParams struct {
+	// PillarId ID of the Pillar to be added
+	PillarId int32 `form:"pillar_id" json:"pillar_id"`
 }
 
 // ListGrantParams defines parameters for ListGrant.
@@ -209,14 +263,16 @@ type ListTaskParams struct {
 
 // CreateTaskJSONBody defines parameters for CreateTask.
 type CreateTaskJSONBody struct {
-	Description  string   `json:"Description"`
+	Description  string   `json:"description"`
 	Participants *[]int32 `json:"participants,omitempty"`
+	Title        string   `json:"title"`
 }
 
 // UpdateTaskJSONBody defines parameters for UpdateTask.
 type UpdateTaskJSONBody struct {
-	Description  string   `json:"Description"`
+	Description  string   `json:"description"`
 	Participants *[]int32 `json:"participants,omitempty"`
+	Title        string   `json:"title"`
 }
 
 // ListTaskParticipantsParams defines parameters for ListTaskParticipants.
@@ -266,6 +322,12 @@ type CreateBoardJSONRequestBody CreateBoardJSONBody
 // UpdateBoardJSONRequestBody defines body for UpdateBoard for application/json ContentType.
 type UpdateBoardJSONRequestBody UpdateBoardJSONBody
 
+// AddBoardParticipantJSONRequestBody defines body for AddBoardParticipant for application/json ContentType.
+type AddBoardParticipantJSONRequestBody = ParticipantBoard
+
+// AddBoardTaskJSONRequestBody defines body for AddBoardTask for application/json ContentType.
+type AddBoardTaskJSONRequestBody AddBoardTaskJSONBody
+
 // CreateGrantJSONRequestBody defines body for CreateGrant for application/json ContentType.
 type CreateGrantJSONRequestBody = CreateGrantJSONBody
 
@@ -313,12 +375,33 @@ type ServerInterface interface {
 	// Updates a Board
 	// (PATCH /boards/{id})
 	UpdateBoard(w http.ResponseWriter, r *http.Request, id int32)
+	// Delete a Participant to the Board
+	// (DELETE /boards/{id}/participants)
+	RemoveBoardParticipant(w http.ResponseWriter, r *http.Request, id int32, params RemoveBoardParticipantParams)
 	// Find the attached Participants
 	// (GET /boards/{id}/participants)
 	ListBoardParticipants(w http.ResponseWriter, r *http.Request, id int32, params ListBoardParticipantsParams)
+	// Add a Participant to the Board
+	// (POST /boards/{id}/participants)
+	AddBoardParticipant(w http.ResponseWriter, r *http.Request, id int32)
+	// Remove a Pillar from the Board
+	// (DELETE /boards/{id}/pillars)
+	RemoveBoardPillar(w http.ResponseWriter, r *http.Request, id int32, params RemoveBoardPillarParams)
+	// Find the attached Pillars
+	// (GET /boards/{id}/pillars)
+	ListBoardPillars(w http.ResponseWriter, r *http.Request, id int32, params ListBoardPillarsParams)
+	// Add a Pillar to the Board
+	// (POST /boards/{id}/pillars)
+	AddBoardPillar(w http.ResponseWriter, r *http.Request, id int32)
+	// Remove a Task from the Board
+	// (DELETE /boards/{id}/tasks)
+	RemoveBoardTask(w http.ResponseWriter, r *http.Request, id int32, params RemoveBoardTaskParams)
 	// Find the attached Tasks
 	// (GET /boards/{id}/tasks)
 	ListBoardTasks(w http.ResponseWriter, r *http.Request, id int32, params ListBoardTasksParams)
+	// Add a Task to the Board
+	// (POST /boards/{id}/tasks)
+	AddBoardTask(w http.ResponseWriter, r *http.Request, id int32, params AddBoardTaskParams)
 	// List Grants
 	// (GET /grants)
 	ListGrant(w http.ResponseWriter, r *http.Request, params ListGrantParams)
@@ -397,6 +480,9 @@ type ServerInterface interface {
 	// Create a new User
 	// (POST /users)
 	CreateUser(w http.ResponseWriter, r *http.Request)
+	// Get all User Boards
+	// (GET /users/boards)
+	GetUserBoards(w http.ResponseWriter, r *http.Request)
 	// Deletes a User by ID
 	// (DELETE /users/{id})
 	DeleteUser(w http.ResponseWriter, r *http.Request, id string)
@@ -445,15 +531,57 @@ func (_ Unimplemented) UpdateBoard(w http.ResponseWriter, r *http.Request, id in
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Delete a Participant to the Board
+// (DELETE /boards/{id}/participants)
+func (_ Unimplemented) RemoveBoardParticipant(w http.ResponseWriter, r *http.Request, id int32, params RemoveBoardParticipantParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Find the attached Participants
 // (GET /boards/{id}/participants)
 func (_ Unimplemented) ListBoardParticipants(w http.ResponseWriter, r *http.Request, id int32, params ListBoardParticipantsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Add a Participant to the Board
+// (POST /boards/{id}/participants)
+func (_ Unimplemented) AddBoardParticipant(w http.ResponseWriter, r *http.Request, id int32) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Remove a Pillar from the Board
+// (DELETE /boards/{id}/pillars)
+func (_ Unimplemented) RemoveBoardPillar(w http.ResponseWriter, r *http.Request, id int32, params RemoveBoardPillarParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Find the attached Pillars
+// (GET /boards/{id}/pillars)
+func (_ Unimplemented) ListBoardPillars(w http.ResponseWriter, r *http.Request, id int32, params ListBoardPillarsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Add a Pillar to the Board
+// (POST /boards/{id}/pillars)
+func (_ Unimplemented) AddBoardPillar(w http.ResponseWriter, r *http.Request, id int32) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Remove a Task from the Board
+// (DELETE /boards/{id}/tasks)
+func (_ Unimplemented) RemoveBoardTask(w http.ResponseWriter, r *http.Request, id int32, params RemoveBoardTaskParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Find the attached Tasks
 // (GET /boards/{id}/tasks)
 func (_ Unimplemented) ListBoardTasks(w http.ResponseWriter, r *http.Request, id int32, params ListBoardTasksParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Add a Task to the Board
+// (POST /boards/{id}/tasks)
+func (_ Unimplemented) AddBoardTask(w http.ResponseWriter, r *http.Request, id int32, params AddBoardTaskParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -610,6 +738,12 @@ func (_ Unimplemented) ListUser(w http.ResponseWriter, r *http.Request, params L
 // Create a new User
 // (POST /users)
 func (_ Unimplemented) CreateUser(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Get all User Boards
+// (GET /users/boards)
+func (_ Unimplemented) GetUserBoards(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -785,6 +919,52 @@ func (siw *ServerInterfaceWrapper) UpdateBoard(w http.ResponseWriter, r *http.Re
 	handler.ServeHTTP(w, r.WithContext(ctx))
 }
 
+// RemoveBoardParticipant operation middleware
+func (siw *ServerInterfaceWrapper) RemoveBoardParticipant(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id int32
+
+	err = runtime.BindStyledParameterWithLocation("simple", false, "id", runtime.ParamLocationPath, chi.URLParam(r, "id"), &id)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params RemoveBoardParticipantParams
+
+	// ------------- Required query parameter "user_id" -------------
+
+	if paramValue := r.URL.Query().Get("user_id"); paramValue != "" {
+
+	} else {
+		siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "user_id"})
+		return
+	}
+
+	err = runtime.BindQueryParameter("form", true, true, "user_id", r.URL.Query(), &params.UserId)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "user_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RemoveBoardParticipant(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
 // ListBoardParticipants operation middleware
 func (siw *ServerInterfaceWrapper) ListBoardParticipants(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
@@ -830,6 +1010,195 @@ func (siw *ServerInterfaceWrapper) ListBoardParticipants(w http.ResponseWriter, 
 	handler.ServeHTTP(w, r.WithContext(ctx))
 }
 
+// AddBoardParticipant operation middleware
+func (siw *ServerInterfaceWrapper) AddBoardParticipant(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id int32
+
+	err = runtime.BindStyledParameterWithLocation("simple", false, "id", runtime.ParamLocationPath, chi.URLParam(r, "id"), &id)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AddBoardParticipant(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
+// RemoveBoardPillar operation middleware
+func (siw *ServerInterfaceWrapper) RemoveBoardPillar(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id int32
+
+	err = runtime.BindStyledParameterWithLocation("simple", false, "id", runtime.ParamLocationPath, chi.URLParam(r, "id"), &id)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params RemoveBoardPillarParams
+
+	// ------------- Required query parameter "pillar_id" -------------
+
+	if paramValue := r.URL.Query().Get("pillar_id"); paramValue != "" {
+
+	} else {
+		siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "pillar_id"})
+		return
+	}
+
+	err = runtime.BindQueryParameter("form", true, true, "pillar_id", r.URL.Query(), &params.PillarId)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "pillar_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RemoveBoardPillar(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
+// ListBoardPillars operation middleware
+func (siw *ServerInterfaceWrapper) ListBoardPillars(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id int32
+
+	err = runtime.BindStyledParameterWithLocation("simple", false, "id", runtime.ParamLocationPath, chi.URLParam(r, "id"), &id)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListBoardPillarsParams
+
+	// ------------- Optional query parameter "page" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "page", r.URL.Query(), &params.Page)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "page", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "itemsPerPage" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "itemsPerPage", r.URL.Query(), &params.ItemsPerPage)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "itemsPerPage", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListBoardPillars(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
+// AddBoardPillar operation middleware
+func (siw *ServerInterfaceWrapper) AddBoardPillar(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id int32
+
+	err = runtime.BindStyledParameterWithLocation("simple", false, "id", runtime.ParamLocationPath, chi.URLParam(r, "id"), &id)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AddBoardPillar(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
+// RemoveBoardTask operation middleware
+func (siw *ServerInterfaceWrapper) RemoveBoardTask(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id int32
+
+	err = runtime.BindStyledParameterWithLocation("simple", false, "id", runtime.ParamLocationPath, chi.URLParam(r, "id"), &id)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params RemoveBoardTaskParams
+
+	// ------------- Required query parameter "task_id" -------------
+
+	if paramValue := r.URL.Query().Get("task_id"); paramValue != "" {
+
+	} else {
+		siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "task_id"})
+		return
+	}
+
+	err = runtime.BindQueryParameter("form", true, true, "task_id", r.URL.Query(), &params.TaskId)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "task_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RemoveBoardTask(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
 // ListBoardTasks operation middleware
 func (siw *ServerInterfaceWrapper) ListBoardTasks(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
@@ -866,6 +1235,52 @@ func (siw *ServerInterfaceWrapper) ListBoardTasks(w http.ResponseWriter, r *http
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListBoardTasks(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
+// AddBoardTask operation middleware
+func (siw *ServerInterfaceWrapper) AddBoardTask(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id int32
+
+	err = runtime.BindStyledParameterWithLocation("simple", false, "id", runtime.ParamLocationPath, chi.URLParam(r, "id"), &id)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params AddBoardTaskParams
+
+	// ------------- Required query parameter "pillar_id" -------------
+
+	if paramValue := r.URL.Query().Get("pillar_id"); paramValue != "" {
+
+	} else {
+		siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "pillar_id"})
+		return
+	}
+
+	err = runtime.BindQueryParameter("form", true, true, "pillar_id", r.URL.Query(), &params.PillarId)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "pillar_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AddBoardTask(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1666,6 +2081,23 @@ func (siw *ServerInterfaceWrapper) CreateUser(w http.ResponseWriter, r *http.Req
 	handler.ServeHTTP(w, r.WithContext(ctx))
 }
 
+// GetUserBoards operation middleware
+func (siw *ServerInterfaceWrapper) GetUserBoards(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetUserBoards(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
 // DeleteUser operation middleware
 func (siw *ServerInterfaceWrapper) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
@@ -1924,10 +2356,31 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Patch(options.BaseURL+"/boards/{id}", wrapper.UpdateBoard)
 	})
 	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/boards/{id}/participants", wrapper.RemoveBoardParticipant)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/boards/{id}/participants", wrapper.ListBoardParticipants)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/boards/{id}/participants", wrapper.AddBoardParticipant)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/boards/{id}/pillars", wrapper.RemoveBoardPillar)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/boards/{id}/pillars", wrapper.ListBoardPillars)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/boards/{id}/pillars", wrapper.AddBoardPillar)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/boards/{id}/tasks", wrapper.RemoveBoardTask)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/boards/{id}/tasks", wrapper.ListBoardTasks)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/boards/{id}/tasks", wrapper.AddBoardTask)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/grants", wrapper.ListGrant)
@@ -2008,6 +2461,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/users", wrapper.CreateUser)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/users/boards", wrapper.GetUserBoards)
+	})
+	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/users/{id}", wrapper.DeleteUser)
 	})
 	r.Group(func(r chi.Router) {
@@ -2026,42 +2482,50 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"H4sIAAAAAAAC/+xcXW/bOBb9K4R2H4VYje3EyVu7mVkEWCyCabsvRR4Y6cbmjC2pJJVMEPi/L0jKFq1P",
-	"UrYVS/VDG8fi170891zeI0Xvjh+t4iiEkDPn9t2hwOIoZCB/mXie+OFHIYeQi484jpfEx5xE4ehPFoXi",
-	"O+YvYIXFp5hGMVBOVG8/CkD8hL/xKl6CczvxPNd5jugKc+fWISEfXzquw99iUL/CHKizdh2gNKJyiPRa",
-	"9PQn+FxcYhzzhO2M6nzBAfoDfibAeDYc45SEc2e9dvODiK8CYD4lsTBDTv2ClyRAJIwT7qIAc4zS78Sc",
-	"E29yWC9MjuGF/0Yc/R4lYdDOBxRYlFAfUBhx9CzHWbvO9LAAmB4HAPchBxriJfoK9AUo+k10b+eGJIS/",
-	"Y/A5BEguQvZS9slJv0SYBtPr6fTGu5ld/o/Aa9FsEoj/G81cuw6FnwmhEDi3P0SvR7do778pDvl4Nva8",
-	"q9n4+qqDGR8w5cQnsZj30ru+nE5ursZdzEuWS0wvZ+OrqXc9vZx0MOU3zP4aX82urqdXn7xP5RPe6fh4",
-	"z2PKbbkgfVS3annfGdBPs8mnm9nN7Nqr80dhVTFm7DWi5RcTJsJlBSUXi37TxtJ6Fpcr4gT8hBL+9lXE",
-	"i1reF8AU6OeEL7ZEITo9ya8zNy04j1U4kvA52lAO9gXlFGL024IwRBjCIcIJj9AcQqBYhOznh3uktUUr",
-	"HACKEo6iZ9H6t5AjFcsogGcSktT9S+JDyKQ7lFsc4SVOuGQX0eur6vX54d5xnRegTK3Eu/AuPNE2iiHE",
-	"MXFunfGFdzGWTuML6YHRk6AM+XEOkkJ3rfkPYRxJWmEXjhyJSna9D9KL8pockeIVcBDE+CM/yusCcxTj",
-	"OSAeIQphIL1LxKWfCdA3x92YJho5rsbZBtDNz0Y4rJAfJSHPpkOx+KcGL5tX9GEPQB/s5390d48ll5ZZ",
-	"SU4tPvyTwrNz6/xjlJ15Rim5j0qYPUsYmFL8VpE2k2W6f2hJGFcHBq9qtq0dI9EoO1w0tZ1o2bi+rWik",
-	"B6MEix6GPx6FQ1myWmH6tgtA4Xw8F/hSic55FFQSsRLY/osC5sAQRiG8pvbjMBAoYIRxhojEBuMRxXMo",
-	"Ilv132CbquPblyh42+O8EWeZi+3su8GRY3ejhR/YX3sOYnLeUI7jEfKlP5z1nlC3RXjVitRyAls0Hweh",
-	"Cis61EqAunY3VDt6J8FaIXYJHIrYvZPfM8QXkCL3lfCF/DUFIgTo/q4IWtXRiJDv70TSyWbgEUqXk9Kj",
-	"SBAaO26iQGVeThPYlyMnRcM1Y3VD0Stm6eqC/vHXZjdx6umnN3R/V8pkpfn3dxIGjVCQ1EaBJzQUzFZE",
-	"xh+Agza46AwNH0Mj5VDblpf9AppAigHKYsz9RRFn3+MA6zDdSZb+AodzwUg1GVMN0JZ8Etn7mHD7pTN4",
-	"Zobm7FNJ5mo5PYy4XMw0Z/1RHkCVlC+jA3OO/QUESNM82G7obNPBnLxAqGK+okbTB/ml6zW3n0nPqEys",
-	"VscMqsUdmG3BxyPUo2y5mw4ro8ggVrcEbRik30T71tEpe5/DcqBhWaLkGsSjQtTwAnGD9bIInNPa3CjV",
-	"IHnToUKOlNfOcuSxAV1238dcj5S9+6xHKgRqEFawM9Ujlf32euQG3G2rmcZqQS2sG72vFEJVSzpdwW+z",
-	"J3kkZGRmJfgpc60EPyPKy5Lpdo8/XvDTjB2i4KfMy0sxGVU0CH41UDAS/NrgooeCnxWPDFHxa4JZo+JX",
-	"ko7MFb+27HOqip9hjuxcUbOC+QAktbq8aiSjyYOaXvOXFwxai3PZcNLyVFo8aGP0uYSoUKN0OJqWE7pH",
-	"7IuK3QA4zI2S7KGiHtwi0d3XTelTEwb1yzvdMmgXReVozlO3VWGku8GqPLIg+OyYksPEx5dKBfOHWDDp",
-	"RubPs3libCieGuFiVELti50ellOtuWmIpZUNIBvLrMo0bV5sHYLL+vGoRW9PEJ0Xhq0DdgBFYutTR9Nj",
-	"78WbVuoR5LKYMrvLq/XYPs18vtnby/R5xAf2U5Tp93x7l2Nr7vwWnuM3CdW9HsTYK1DPD2UMP04P9WjG",
-	"kMI0/4BGSZTKv4ZsEl9VowrdVV48S65Hl1zL/m7VQm2V3XsttKZQ1eCsoGcsryoXtFBWNxA/TEnUVTGj",
-	"zO1ICS1FZ+WiTlj/3Ox1AWQaXdoJnspkO63TiFS1HL7d6xNQODV7ByluKvsKMlJGRk2SZg0gzNTMVujo",
-	"o4ZpxyqDVC4b0dasV5bkPQupsjUV9UOg7DYbd68q2oXQELRE4wy+pyKRo/F6MUI2PusQbk+zVLcSRI/S",
-	"mY36oMdhfejJgk/2LxcdxKWz5HCaeE4FB9G5z3JDHr0ScqZSgzTeXmhIYX2Yg03TG8UO90fwNS8dezQ4",
-	"GklndSNTlCG6YkGnK1GkKMkBc0uqVuKENNVKmjCh3iypb/b242WJzNIhihLSunyRuKWsBkGiGgRGcoQ9",
-	"InooRVgwxxBliHp8NUoQxXxoLkC0I5x+iA/9ytGdixcWQTcA4cIkrx/yzTO7tF8rX4im5/fONGsYJ5zc",
-	"PvC1M/3JivZvndGiNGHQ9CTFd9GkXNIQl86SxrEBXvKua3NJQ3Tus6Qh0adhV0LOVNKQxttLGimsD3Nc",
-	"ejjge/sO9Opyw7eWFyAl3dmN6FGG+YoFna7okeIoB90t7VqJHtJUK9HDhJyzU8Bmb/cQPfKgM5I4MruG",
-	"KHFI6/Il6JbCGiSO6i03kjjs9/9Iu/4hrDBEQaMeTY2CRjEbmgsa7chkD0GjFFbnfFwEeucCh0UQDkDg",
-	"MMnhhxQ4dkm/VuAQTc8CR7PAcTKp7QPljP7kRHs5YxOT6/X/AwAA//+0SE+ysm8AAA==",
+	"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",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

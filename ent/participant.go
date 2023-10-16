@@ -10,6 +10,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
 	"github.com/romashorodok/infosec/ent/participant"
+	"github.com/romashorodok/infosec/ent/user"
 )
 
 // Participant is the model entity for the Participant schema.
@@ -30,9 +31,11 @@ type ParticipantEdges struct {
 	Boards []*Board `json:"boards,omitempty"`
 	// Tasks holds the value of the tasks edge.
 	Tasks []*Task `json:"tasks,omitempty"`
+	// User holds the value of the user edge.
+	User *User `json:"user,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [2]bool
+	loadedTypes [3]bool
 }
 
 // BoardsOrErr returns the Boards value or an error if the edge
@@ -51,6 +54,19 @@ func (e ParticipantEdges) TasksOrErr() ([]*Task, error) {
 		return e.Tasks, nil
 	}
 	return nil, &NotLoadedError{edge: "tasks"}
+}
+
+// UserOrErr returns the User value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e ParticipantEdges) UserOrErr() (*User, error) {
+	if e.loadedTypes[2] {
+		if e.User == nil {
+			// Edge was loaded but was not found.
+			return nil, &NotFoundError{label: user.Label}
+		}
+		return e.User, nil
+	}
+	return nil, &NotLoadedError{edge: "user"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -111,6 +127,11 @@ func (pa *Participant) QueryBoards() *BoardQuery {
 // QueryTasks queries the "tasks" edge of the Participant entity.
 func (pa *Participant) QueryTasks() *TaskQuery {
 	return NewParticipantClient(pa.config).QueryTasks(pa)
+}
+
+// QueryUser queries the "user" edge of the Participant entity.
+func (pa *Participant) QueryUser() *UserQuery {
+	return NewParticipantClient(pa.config).QueryUser(pa)
 }
 
 // Update returns a builder for updating this Participant.

@@ -10,10 +10,12 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/google/uuid"
 	"github.com/romashorodok/infosec/ent/board"
 	"github.com/romashorodok/infosec/ent/participant"
 	"github.com/romashorodok/infosec/ent/predicate"
 	"github.com/romashorodok/infosec/ent/task"
+	"github.com/romashorodok/infosec/ent/user"
 )
 
 // ParticipantUpdate is the builder for updating Participant entities.
@@ -57,6 +59,25 @@ func (pu *ParticipantUpdate) AddTasks(t ...*Task) *ParticipantUpdate {
 		ids[i] = t[i].ID
 	}
 	return pu.AddTaskIDs(ids...)
+}
+
+// SetUserID sets the "user" edge to the User entity by ID.
+func (pu *ParticipantUpdate) SetUserID(id uuid.UUID) *ParticipantUpdate {
+	pu.mutation.SetUserID(id)
+	return pu
+}
+
+// SetNillableUserID sets the "user" edge to the User entity by ID if the given value is not nil.
+func (pu *ParticipantUpdate) SetNillableUserID(id *uuid.UUID) *ParticipantUpdate {
+	if id != nil {
+		pu = pu.SetUserID(*id)
+	}
+	return pu
+}
+
+// SetUser sets the "user" edge to the User entity.
+func (pu *ParticipantUpdate) SetUser(u *User) *ParticipantUpdate {
+	return pu.SetUserID(u.ID)
 }
 
 // Mutation returns the ParticipantMutation object of the builder.
@@ -104,6 +125,12 @@ func (pu *ParticipantUpdate) RemoveTasks(t ...*Task) *ParticipantUpdate {
 		ids[i] = t[i].ID
 	}
 	return pu.RemoveTaskIDs(ids...)
+}
+
+// ClearUser clears the "user" edge to the User entity.
+func (pu *ParticipantUpdate) ClearUser() *ParticipantUpdate {
+	pu.mutation.ClearUser()
+	return pu
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -232,6 +259,35 @@ func (pu *ParticipantUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if pu.mutation.UserCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   participant.UserTable,
+			Columns: []string{participant.UserColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := pu.mutation.UserIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   participant.UserTable,
+			Columns: []string{participant.UserColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if n, err = sqlgraph.UpdateNodes(ctx, pu.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{participant.Label}
@@ -282,6 +338,25 @@ func (puo *ParticipantUpdateOne) AddTasks(t ...*Task) *ParticipantUpdateOne {
 	return puo.AddTaskIDs(ids...)
 }
 
+// SetUserID sets the "user" edge to the User entity by ID.
+func (puo *ParticipantUpdateOne) SetUserID(id uuid.UUID) *ParticipantUpdateOne {
+	puo.mutation.SetUserID(id)
+	return puo
+}
+
+// SetNillableUserID sets the "user" edge to the User entity by ID if the given value is not nil.
+func (puo *ParticipantUpdateOne) SetNillableUserID(id *uuid.UUID) *ParticipantUpdateOne {
+	if id != nil {
+		puo = puo.SetUserID(*id)
+	}
+	return puo
+}
+
+// SetUser sets the "user" edge to the User entity.
+func (puo *ParticipantUpdateOne) SetUser(u *User) *ParticipantUpdateOne {
+	return puo.SetUserID(u.ID)
+}
+
 // Mutation returns the ParticipantMutation object of the builder.
 func (puo *ParticipantUpdateOne) Mutation() *ParticipantMutation {
 	return puo.mutation
@@ -327,6 +402,12 @@ func (puo *ParticipantUpdateOne) RemoveTasks(t ...*Task) *ParticipantUpdateOne {
 		ids[i] = t[i].ID
 	}
 	return puo.RemoveTaskIDs(ids...)
+}
+
+// ClearUser clears the "user" edge to the User entity.
+func (puo *ParticipantUpdateOne) ClearUser() *ParticipantUpdateOne {
+	puo.mutation.ClearUser()
+	return puo
 }
 
 // Where appends a list predicates to the ParticipantUpdate builder.
@@ -478,6 +559,35 @@ func (puo *ParticipantUpdateOne) sqlSave(ctx context.Context) (_node *Participan
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(task.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if puo.mutation.UserCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   participant.UserTable,
+			Columns: []string{participant.UserColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := puo.mutation.UserIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   participant.UserTable,
+			Columns: []string{participant.UserColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

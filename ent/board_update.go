@@ -12,6 +12,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/romashorodok/infosec/ent/board"
 	"github.com/romashorodok/infosec/ent/participant"
+	"github.com/romashorodok/infosec/ent/pillar"
 	"github.com/romashorodok/infosec/ent/predicate"
 	"github.com/romashorodok/infosec/ent/task"
 )
@@ -26,6 +27,12 @@ type BoardUpdate struct {
 // Where appends a list predicates to the BoardUpdate builder.
 func (bu *BoardUpdate) Where(ps ...predicate.Board) *BoardUpdate {
 	bu.mutation.Where(ps...)
+	return bu
+}
+
+// SetTitle sets the "title" field.
+func (bu *BoardUpdate) SetTitle(s string) *BoardUpdate {
+	bu.mutation.SetTitle(s)
 	return bu
 }
 
@@ -57,6 +64,21 @@ func (bu *BoardUpdate) AddParticipants(p ...*Participant) *BoardUpdate {
 		ids[i] = p[i].ID
 	}
 	return bu.AddParticipantIDs(ids...)
+}
+
+// AddPillarIDs adds the "pillars" edge to the Pillar entity by IDs.
+func (bu *BoardUpdate) AddPillarIDs(ids ...int) *BoardUpdate {
+	bu.mutation.AddPillarIDs(ids...)
+	return bu
+}
+
+// AddPillars adds the "pillars" edges to the Pillar entity.
+func (bu *BoardUpdate) AddPillars(p ...*Pillar) *BoardUpdate {
+	ids := make([]int, len(p))
+	for i := range p {
+		ids[i] = p[i].ID
+	}
+	return bu.AddPillarIDs(ids...)
 }
 
 // Mutation returns the BoardMutation object of the builder.
@@ -106,6 +128,27 @@ func (bu *BoardUpdate) RemoveParticipants(p ...*Participant) *BoardUpdate {
 	return bu.RemoveParticipantIDs(ids...)
 }
 
+// ClearPillars clears all "pillars" edges to the Pillar entity.
+func (bu *BoardUpdate) ClearPillars() *BoardUpdate {
+	bu.mutation.ClearPillars()
+	return bu
+}
+
+// RemovePillarIDs removes the "pillars" edge to Pillar entities by IDs.
+func (bu *BoardUpdate) RemovePillarIDs(ids ...int) *BoardUpdate {
+	bu.mutation.RemovePillarIDs(ids...)
+	return bu
+}
+
+// RemovePillars removes "pillars" edges to Pillar entities.
+func (bu *BoardUpdate) RemovePillars(p ...*Pillar) *BoardUpdate {
+	ids := make([]int, len(p))
+	for i := range p {
+		ids[i] = p[i].ID
+	}
+	return bu.RemovePillarIDs(ids...)
+}
+
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (bu *BoardUpdate) Save(ctx context.Context) (int, error) {
 	return withHooks(ctx, bu.sqlSave, bu.mutation, bu.hooks)
@@ -141,6 +184,9 @@ func (bu *BoardUpdate) sqlSave(ctx context.Context) (n int, err error) {
 				ps[i](selector)
 			}
 		}
+	}
+	if value, ok := bu.mutation.Title(); ok {
+		_spec.SetField(board.FieldTitle, field.TypeString, value)
 	}
 	if bu.mutation.TasksCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -232,6 +278,51 @@ func (bu *BoardUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if bu.mutation.PillarsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   board.PillarsTable,
+			Columns: []string{board.PillarsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(pillar.FieldID, field.TypeInt),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := bu.mutation.RemovedPillarsIDs(); len(nodes) > 0 && !bu.mutation.PillarsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   board.PillarsTable,
+			Columns: []string{board.PillarsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(pillar.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := bu.mutation.PillarsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   board.PillarsTable,
+			Columns: []string{board.PillarsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(pillar.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if n, err = sqlgraph.UpdateNodes(ctx, bu.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{board.Label}
@@ -250,6 +341,12 @@ type BoardUpdateOne struct {
 	fields   []string
 	hooks    []Hook
 	mutation *BoardMutation
+}
+
+// SetTitle sets the "title" field.
+func (buo *BoardUpdateOne) SetTitle(s string) *BoardUpdateOne {
+	buo.mutation.SetTitle(s)
+	return buo
 }
 
 // AddTaskIDs adds the "tasks" edge to the Task entity by IDs.
@@ -280,6 +377,21 @@ func (buo *BoardUpdateOne) AddParticipants(p ...*Participant) *BoardUpdateOne {
 		ids[i] = p[i].ID
 	}
 	return buo.AddParticipantIDs(ids...)
+}
+
+// AddPillarIDs adds the "pillars" edge to the Pillar entity by IDs.
+func (buo *BoardUpdateOne) AddPillarIDs(ids ...int) *BoardUpdateOne {
+	buo.mutation.AddPillarIDs(ids...)
+	return buo
+}
+
+// AddPillars adds the "pillars" edges to the Pillar entity.
+func (buo *BoardUpdateOne) AddPillars(p ...*Pillar) *BoardUpdateOne {
+	ids := make([]int, len(p))
+	for i := range p {
+		ids[i] = p[i].ID
+	}
+	return buo.AddPillarIDs(ids...)
 }
 
 // Mutation returns the BoardMutation object of the builder.
@@ -327,6 +439,27 @@ func (buo *BoardUpdateOne) RemoveParticipants(p ...*Participant) *BoardUpdateOne
 		ids[i] = p[i].ID
 	}
 	return buo.RemoveParticipantIDs(ids...)
+}
+
+// ClearPillars clears all "pillars" edges to the Pillar entity.
+func (buo *BoardUpdateOne) ClearPillars() *BoardUpdateOne {
+	buo.mutation.ClearPillars()
+	return buo
+}
+
+// RemovePillarIDs removes the "pillars" edge to Pillar entities by IDs.
+func (buo *BoardUpdateOne) RemovePillarIDs(ids ...int) *BoardUpdateOne {
+	buo.mutation.RemovePillarIDs(ids...)
+	return buo
+}
+
+// RemovePillars removes "pillars" edges to Pillar entities.
+func (buo *BoardUpdateOne) RemovePillars(p ...*Pillar) *BoardUpdateOne {
+	ids := make([]int, len(p))
+	for i := range p {
+		ids[i] = p[i].ID
+	}
+	return buo.RemovePillarIDs(ids...)
 }
 
 // Where appends a list predicates to the BoardUpdate builder.
@@ -394,6 +527,9 @@ func (buo *BoardUpdateOne) sqlSave(ctx context.Context) (_node *Board, err error
 				ps[i](selector)
 			}
 		}
+	}
+	if value, ok := buo.mutation.Title(); ok {
+		_spec.SetField(board.FieldTitle, field.TypeString, value)
 	}
 	if buo.mutation.TasksCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -478,6 +614,51 @@ func (buo *BoardUpdateOne) sqlSave(ctx context.Context) (_node *Board, err error
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(participant.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if buo.mutation.PillarsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   board.PillarsTable,
+			Columns: []string{board.PillarsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(pillar.FieldID, field.TypeInt),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := buo.mutation.RemovedPillarsIDs(); len(nodes) > 0 && !buo.mutation.PillarsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   board.PillarsTable,
+			Columns: []string{board.PillarsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(pillar.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := buo.mutation.PillarsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   board.PillarsTable,
+			Columns: []string{board.PillarsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(pillar.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {

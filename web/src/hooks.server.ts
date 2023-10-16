@@ -11,14 +11,14 @@ export const REFRESH_TOKEN_ROUTE = `${env.PUBLIC_API_HOST}/access-token` as cons
 
 export const handleFetch: HandleFetch = (async ({ request, fetch, event: { cookies } }) => {
 
-	if (request.url === VERIFY_ROUTE || request.url === REFRESH_TOKEN_ROUTE) {
-		const refreshToken = cookies.get(_REFRESH_TOKEN);
+	const refreshToken = cookies.get(_REFRESH_TOKEN);
 
-		if (!refreshToken)
-			return json({ message: "missing refresh token" }, { status: 401 });
+	if (!refreshToken)
+		return json({ message: "missing refresh token" }, { status: 401 });
 
-		request.headers.set('Authorization', `Bearer ${refreshToken}`);
-	}
+	request.headers.set('Authorization', `Bearer ${refreshToken}`);
+
+
 	return fetch(request)
 })
 

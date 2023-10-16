@@ -16,9 +16,10 @@ import (
 	"github.com/go-chi/cors"
 	_ "github.com/lib/pq"
 	v1httpidentity "github.com/romashorodok/infosec/internal/http/v1/identity"
-	"github.com/romashorodok/infosec/internal/http/v1/kanban"
+	v1httpkanban "github.com/romashorodok/infosec/internal/http/v1/kanban"
 	"github.com/romashorodok/infosec/internal/identity"
 	"github.com/romashorodok/infosec/internal/identity/security"
+	"github.com/romashorodok/infosec/internal/kanban"
 	"github.com/romashorodok/infosec/internal/storage/postgres/privatekey"
 	"github.com/romashorodok/infosec/internal/storage/postgres/refreshtoken"
 	"github.com/romashorodok/infosec/internal/storage/postgres/user"
@@ -226,13 +227,23 @@ func NewEntClient(params EntClientParams) (*ent.Client, error) {
 
 		_, _ = params.DB.ExecContext(ctx, "ALTER TABLE users ALTER COLUMN id SET DEFAULT uuid_generate_v4();")
 
-		// id, _ := uuid.FromString("bc3a2ad3-cc1c-4f46-8be4-62c6dc3872ff")
-		// user, _ := client.User.Get(ctx, id)
+		// TODO: Why go fmt not work for that ?
+		_, _ = params.DB.ExecContext(ctx, `
+CREATE OR REPLACE FUNCTION delete_related_participants()
+RETURNS TRIGGER AS $$
+BEGIN
+    DELETE FROM participants
+    WHERE id = OLD.participant_id;
+    RETURN OLD;
+END;
 
-		// result, err := user.QueryParticipants().First(ctx)
+$$ LANGUAGE plpgsql;
 
-		// log.Printf("%+v", user)
-
+CREATE TRIGGER after_board_participants_delete
+AFTER DELETE ON board_participants
+FOR EACH ROW
+EXECUTE FUNCTION delete_related_participants();
+`)
 	}))
 
 	return client, nil
@@ -248,7 +259,7 @@ func main() {
 
 	fx.New(
 		fx.Provide(
-			httputils.AsHttpHandler(kanban.NewHandler),
+			httputils.AsHttpHandler(v1httpkanban.NewHandler),
 			httputils.AsHttpHandler(v1httpidentity.NewHandler),
 		),
 
@@ -265,6 +276,8 @@ func main() {
 			NewEntClient,
 
 			NewSpecOptionsHandlerConstructor,
+
+			kanban.NewKanbanService,
 
 			user.NewUserRepository,
 			privatekey.NewPrivateKeyRepositroy,

@@ -42,6 +42,7 @@ type BoardMutation struct {
 	op                  Op
 	typ                 string
 	id                  *int
+	title               *string
 	clearedFields       map[string]struct{}
 	tasks               map[int]struct{}
 	removedtasks        map[int]struct{}
@@ -49,6 +50,9 @@ type BoardMutation struct {
 	participants        map[int]struct{}
 	removedparticipants map[int]struct{}
 	clearedparticipants bool
+	pillars             map[int]struct{}
+	removedpillars      map[int]struct{}
+	clearedpillars      bool
 	done                bool
 	oldValue            func(context.Context) (*Board, error)
 	predicates          []predicate.Board
@@ -150,6 +154,42 @@ func (m *BoardMutation) IDs(ctx context.Context) ([]int, error) {
 	default:
 		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
 	}
+}
+
+// SetTitle sets the "title" field.
+func (m *BoardMutation) SetTitle(s string) {
+	m.title = &s
+}
+
+// Title returns the value of the "title" field in the mutation.
+func (m *BoardMutation) Title() (r string, exists bool) {
+	v := m.title
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTitle returns the old "title" field's value of the Board entity.
+// If the Board object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *BoardMutation) OldTitle(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTitle is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTitle requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTitle: %w", err)
+	}
+	return oldValue.Title, nil
+}
+
+// ResetTitle resets all changes to the "title" field.
+func (m *BoardMutation) ResetTitle() {
+	m.title = nil
 }
 
 // AddTaskIDs adds the "tasks" edge to the Task entity by ids.
@@ -260,6 +300,60 @@ func (m *BoardMutation) ResetParticipants() {
 	m.removedparticipants = nil
 }
 
+// AddPillarIDs adds the "pillars" edge to the Pillar entity by ids.
+func (m *BoardMutation) AddPillarIDs(ids ...int) {
+	if m.pillars == nil {
+		m.pillars = make(map[int]struct{})
+	}
+	for i := range ids {
+		m.pillars[ids[i]] = struct{}{}
+	}
+}
+
+// ClearPillars clears the "pillars" edge to the Pillar entity.
+func (m *BoardMutation) ClearPillars() {
+	m.clearedpillars = true
+}
+
+// PillarsCleared reports if the "pillars" edge to the Pillar entity was cleared.
+func (m *BoardMutation) PillarsCleared() bool {
+	return m.clearedpillars
+}
+
+// RemovePillarIDs removes the "pillars" edge to the Pillar entity by IDs.
+func (m *BoardMutation) RemovePillarIDs(ids ...int) {
+	if m.removedpillars == nil {
+		m.removedpillars = make(map[int]struct{})
+	}
+	for i := range ids {
+		delete(m.pillars, ids[i])
+		m.removedpillars[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedPillars returns the removed IDs of the "pillars" edge to the Pillar entity.
+func (m *BoardMutation) RemovedPillarsIDs() (ids []int) {
+	for id := range m.removedpillars {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// PillarsIDs returns the "pillars" edge IDs in the mutation.
+func (m *BoardMutation) PillarsIDs() (ids []int) {
+	for id := range m.pillars {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetPillars resets all changes to the "pillars" edge.
+func (m *BoardMutation) ResetPillars() {
+	m.pillars = nil
+	m.clearedpillars = false
+	m.removedpillars = nil
+}
+
 // Where appends a list predicates to the BoardMutation builder.
 func (m *BoardMutation) Where(ps ...predicate.Board) {
 	m.predicates = append(m.predicates, ps...)
@@ -294,7 +388,10 @@ func (m *BoardMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *BoardMutation) Fields() []string {
-	fields := make([]string, 0, 0)
+	fields := make([]string, 0, 1)
+	if m.title != nil {
+		fields = append(fields, board.FieldTitle)
+	}
 	return fields
 }
 
@@ -302,6 +399,10 @@ func (m *BoardMutation) Fields() []string {
 // return value indicates that this field was not set, or was not defined in the
 // schema.
 func (m *BoardMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case board.FieldTitle:
+		return m.Title()
+	}
 	return nil, false
 }
 
@@ -309,6 +410,10 @@ func (m *BoardMutation) Field(name string) (ent.Value, bool) {
 // returned if the mutation operation is not UpdateOne, or the query to the
 // database failed.
 func (m *BoardMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case board.FieldTitle:
+		return m.OldTitle(ctx)
+	}
 	return nil, fmt.Errorf("unknown Board field %s", name)
 }
 
@@ -317,6 +422,13 @@ func (m *BoardMutation) OldField(ctx context.Context, name string) (ent.Value, e
 // type.
 func (m *BoardMutation) SetField(name string, value ent.Value) error {
 	switch name {
+	case board.FieldTitle:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTitle(v)
+		return nil
 	}
 	return fmt.Errorf("unknown Board field %s", name)
 }
@@ -338,6 +450,8 @@ func (m *BoardMutation) AddedField(name string) (ent.Value, bool) {
 // the field is not defined in the schema, or if the type mismatched the field
 // type.
 func (m *BoardMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
 	return fmt.Errorf("unknown Board numeric field %s", name)
 }
 
@@ -363,17 +477,25 @@ func (m *BoardMutation) ClearField(name string) error {
 // ResetField resets all changes in the mutation for the field with the given name.
 // It returns an error if the field is not defined in the schema.
 func (m *BoardMutation) ResetField(name string) error {
+	switch name {
+	case board.FieldTitle:
+		m.ResetTitle()
+		return nil
+	}
 	return fmt.Errorf("unknown Board field %s", name)
 }
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *BoardMutation) AddedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 3)
 	if m.tasks != nil {
 		edges = append(edges, board.EdgeTasks)
 	}
 	if m.participants != nil {
 		edges = append(edges, board.EdgeParticipants)
+	}
+	if m.pillars != nil {
+		edges = append(edges, board.EdgePillars)
 	}
 	return edges
 }
@@ -394,18 +516,27 @@ func (m *BoardMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case board.EdgePillars:
+		ids := make([]ent.Value, 0, len(m.pillars))
+		for id := range m.pillars {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *BoardMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 3)
 	if m.removedtasks != nil {
 		edges = append(edges, board.EdgeTasks)
 	}
 	if m.removedparticipants != nil {
 		edges = append(edges, board.EdgeParticipants)
+	}
+	if m.removedpillars != nil {
+		edges = append(edges, board.EdgePillars)
 	}
 	return edges
 }
@@ -426,18 +557,27 @@ func (m *BoardMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case board.EdgePillars:
+		ids := make([]ent.Value, 0, len(m.removedpillars))
+		for id := range m.removedpillars {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *BoardMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 3)
 	if m.clearedtasks {
 		edges = append(edges, board.EdgeTasks)
 	}
 	if m.clearedparticipants {
 		edges = append(edges, board.EdgeParticipants)
+	}
+	if m.clearedpillars {
+		edges = append(edges, board.EdgePillars)
 	}
 	return edges
 }
@@ -450,6 +590,8 @@ func (m *BoardMutation) EdgeCleared(name string) bool {
 		return m.clearedtasks
 	case board.EdgeParticipants:
 		return m.clearedparticipants
+	case board.EdgePillars:
+		return m.clearedpillars
 	}
 	return false
 }
@@ -471,6 +613,9 @@ func (m *BoardMutation) ResetEdge(name string) error {
 		return nil
 	case board.EdgeParticipants:
 		m.ResetParticipants()
+		return nil
+	case board.EdgePillars:
+		m.ResetPillars()
 		return nil
 	}
 	return fmt.Errorf("unknown Board edge %s", name)
@@ -753,6 +898,8 @@ type ParticipantMutation struct {
 	tasks         map[int]struct{}
 	removedtasks  map[int]struct{}
 	clearedtasks  bool
+	user          *uuid.UUID
+	cleareduser   bool
 	done          bool
 	oldValue      func(context.Context) (*Participant, error)
 	predicates    []predicate.Participant
@@ -964,6 +1111,45 @@ func (m *ParticipantMutation) ResetTasks() {
 	m.removedtasks = nil
 }
 
+// SetUserID sets the "user" edge to the User entity by id.
+func (m *ParticipantMutation) SetUserID(id uuid.UUID) {
+	m.user = &id
+}
+
+// ClearUser clears the "user" edge to the User entity.
+func (m *ParticipantMutation) ClearUser() {
+	m.cleareduser = true
+}
+
+// UserCleared reports if the "user" edge to the User entity was cleared.
+func (m *ParticipantMutation) UserCleared() bool {
+	return m.cleareduser
+}
+
+// UserID returns the "user" edge ID in the mutation.
+func (m *ParticipantMutation) UserID() (id uuid.UUID, exists bool) {
+	if m.user != nil {
+		return *m.user, true
+	}
+	return
+}
+
+// UserIDs returns the "user" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// UserID instead. It exists only for internal usage by the builders.
+func (m *ParticipantMutation) UserIDs() (ids []uuid.UUID) {
+	if id := m.user; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetUser resets all changes to the "user" edge.
+func (m *ParticipantMutation) ResetUser() {
+	m.user = nil
+	m.cleareduser = false
+}
+
 // Where appends a list predicates to the ParticipantMutation builder.
 func (m *ParticipantMutation) Where(ps ...predicate.Participant) {
 	m.predicates = append(m.predicates, ps...)
@@ -1072,12 +1258,15 @@ func (m *ParticipantMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *ParticipantMutation) AddedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 3)
 	if m.boards != nil {
 		edges = append(edges, participant.EdgeBoards)
 	}
 	if m.tasks != nil {
 		edges = append(edges, participant.EdgeTasks)
+	}
+	if m.user != nil {
+		edges = append(edges, participant.EdgeUser)
 	}
 	return edges
 }
@@ -1098,13 +1287,17 @@ func (m *ParticipantMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case participant.EdgeUser:
+		if id := m.user; id != nil {
+			return []ent.Value{*id}
+		}
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *ParticipantMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 3)
 	if m.removedboards != nil {
 		edges = append(edges, participant.EdgeBoards)
 	}
@@ -1136,12 +1329,15 @@ func (m *ParticipantMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *ParticipantMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 3)
 	if m.clearedboards {
 		edges = append(edges, participant.EdgeBoards)
 	}
 	if m.clearedtasks {
 		edges = append(edges, participant.EdgeTasks)
+	}
+	if m.cleareduser {
+		edges = append(edges, participant.EdgeUser)
 	}
 	return edges
 }
@@ -1154,6 +1350,8 @@ func (m *ParticipantMutation) EdgeCleared(name string) bool {
 		return m.clearedboards
 	case participant.EdgeTasks:
 		return m.clearedtasks
+	case participant.EdgeUser:
+		return m.cleareduser
 	}
 	return false
 }
@@ -1162,6 +1360,9 @@ func (m *ParticipantMutation) EdgeCleared(name string) bool {
 // if that edge is not defined in the schema.
 func (m *ParticipantMutation) ClearEdge(name string) error {
 	switch name {
+	case participant.EdgeUser:
+		m.ClearUser()
+		return nil
 	}
 	return fmt.Errorf("unknown Participant unique edge %s", name)
 }
@@ -1175,6 +1376,9 @@ func (m *ParticipantMutation) ResetEdge(name string) error {
 		return nil
 	case participant.EdgeTasks:
 		m.ResetTasks()
+		return nil
+	case participant.EdgeUser:
+		m.ResetUser()
 		return nil
 	}
 	return fmt.Errorf("unknown Participant edge %s", name)
@@ -1543,7 +1747,8 @@ type TaskMutation struct {
 	op                  Op
 	typ                 string
 	id                  *int
-	_Description        *string
+	title               *string
+	description         *string
 	clearedFields       map[string]struct{}
 	participants        map[int]struct{}
 	removedparticipants map[int]struct{}
@@ -1651,21 +1856,57 @@ func (m *TaskMutation) IDs(ctx context.Context) ([]int, error) {
 	}
 }
 
-// SetDescription sets the "Description" field.
-func (m *TaskMutation) SetDescription(s string) {
-	m._Description = &s
+// SetTitle sets the "title" field.
+func (m *TaskMutation) SetTitle(s string) {
+	m.title = &s
 }
 
-// Description returns the value of the "Description" field in the mutation.
-func (m *TaskMutation) Description() (r string, exists bool) {
-	v := m._Description
+// Title returns the value of the "title" field in the mutation.
+func (m *TaskMutation) Title() (r string, exists bool) {
+	v := m.title
 	if v == nil {
 		return
 	}
 	return *v, true
 }
 
-// OldDescription returns the old "Description" field's value of the Task entity.
+// OldTitle returns the old "title" field's value of the Task entity.
+// If the Task object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TaskMutation) OldTitle(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTitle is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTitle requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTitle: %w", err)
+	}
+	return oldValue.Title, nil
+}
+
+// ResetTitle resets all changes to the "title" field.
+func (m *TaskMutation) ResetTitle() {
+	m.title = nil
+}
+
+// SetDescription sets the "description" field.
+func (m *TaskMutation) SetDescription(s string) {
+	m.description = &s
+}
+
+// Description returns the value of the "description" field in the mutation.
+func (m *TaskMutation) Description() (r string, exists bool) {
+	v := m.description
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDescription returns the old "description" field's value of the Task entity.
 // If the Task object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *TaskMutation) OldDescription(ctx context.Context) (v string, err error) {
@@ -1682,9 +1923,9 @@ func (m *TaskMutation) OldDescription(ctx context.Context) (v string, err error)
 	return oldValue.Description, nil
 }
 
-// ResetDescription resets all changes to the "Description" field.
+// ResetDescription resets all changes to the "description" field.
 func (m *TaskMutation) ResetDescription() {
-	m._Description = nil
+	m.description = nil
 }
 
 // AddParticipantIDs adds the "participants" edge to the Participant entity by ids.
@@ -1775,8 +2016,11 @@ func (m *TaskMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *TaskMutation) Fields() []string {
-	fields := make([]string, 0, 1)
-	if m._Description != nil {
+	fields := make([]string, 0, 2)
+	if m.title != nil {
+		fields = append(fields, task.FieldTitle)
+	}
+	if m.description != nil {
 		fields = append(fields, task.FieldDescription)
 	}
 	return fields
@@ -1787,6 +2031,8 @@ func (m *TaskMutation) Fields() []string {
 // schema.
 func (m *TaskMutation) Field(name string) (ent.Value, bool) {
 	switch name {
+	case task.FieldTitle:
+		return m.Title()
 	case task.FieldDescription:
 		return m.Description()
 	}
@@ -1798,6 +2044,8 @@ func (m *TaskMutation) Field(name string) (ent.Value, bool) {
 // database failed.
 func (m *TaskMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
 	switch name {
+	case task.FieldTitle:
+		return m.OldTitle(ctx)
 	case task.FieldDescription:
 		return m.OldDescription(ctx)
 	}
@@ -1809,6 +2057,13 @@ func (m *TaskMutation) OldField(ctx context.Context, name string) (ent.Value, er
 // type.
 func (m *TaskMutation) SetField(name string, value ent.Value) error {
 	switch name {
+	case task.FieldTitle:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTitle(v)
+		return nil
 	case task.FieldDescription:
 		v, ok := value.(string)
 		if !ok {
@@ -1865,6 +2120,9 @@ func (m *TaskMutation) ClearField(name string) error {
 // It returns an error if the field is not defined in the schema.
 func (m *TaskMutation) ResetField(name string) error {
 	switch name {
+	case task.FieldTitle:
+		m.ResetTitle()
+		return nil
 	case task.FieldDescription:
 		m.ResetDescription()
 		return nil
@@ -1959,18 +2217,18 @@ func (m *TaskMutation) ResetEdge(name string) error {
 // UserMutation represents an operation that mutates the User nodes in the graph.
 type UserMutation struct {
 	config
-	op                   Op
-	typ                  string
-	id                   *uuid.UUID
-	username             *string
-	password             *string
-	clearedFields        map[string]struct{}
-	_Participants        map[int]struct{}
-	removed_Participants map[int]struct{}
-	cleared_Participants bool
-	done                 bool
-	oldValue             func(context.Context) (*User, error)
-	predicates           []predicate.User
+	op                  Op
+	typ                 string
+	id                  *uuid.UUID
+	username            *string
+	password            *string
+	clearedFields       map[string]struct{}
+	participants        map[int]struct{}
+	removedparticipants map[int]struct{}
+	clearedparticipants bool
+	done                bool
+	oldValue            func(context.Context) (*User, error)
+	predicates          []predicate.User
 }
 
 var _ ent.Mutation = (*UserMutation)(nil)
@@ -2149,58 +2407,58 @@ func (m *UserMutation) ResetPassword() {
 	m.password = nil
 }
 
-// AddParticipantIDs adds the "Participants" edge to the Participant entity by ids.
+// AddParticipantIDs adds the "participants" edge to the Participant entity by ids.
 func (m *UserMutation) AddParticipantIDs(ids ...int) {
-	if m._Participants == nil {
-		m._Participants = make(map[int]struct{})
+	if m.participants == nil {
+		m.participants = make(map[int]struct{})
 	}
 	for i := range ids {
-		m._Participants[ids[i]] = struct{}{}
+		m.participants[ids[i]] = struct{}{}
 	}
 }
 
-// ClearParticipants clears the "Participants" edge to the Participant entity.
+// ClearParticipants clears the "participants" edge to the Participant entity.
 func (m *UserMutation) ClearParticipants() {
-	m.cleared_Participants = true
+	m.clearedparticipants = true
 }
 
-// ParticipantsCleared reports if the "Participants" edge to the Participant entity was cleared.
+// ParticipantsCleared reports if the "participants" edge to the Participant entity was cleared.
 func (m *UserMutation) ParticipantsCleared() bool {
-	return m.cleared_Participants
+	return m.clearedparticipants
 }
 
-// RemoveParticipantIDs removes the "Participants" edge to the Participant entity by IDs.
+// RemoveParticipantIDs removes the "participants" edge to the Participant entity by IDs.
 func (m *UserMutation) RemoveParticipantIDs(ids ...int) {
-	if m.removed_Participants == nil {
-		m.removed_Participants = make(map[int]struct{})
+	if m.removedparticipants == nil {
+		m.removedparticipants = make(map[int]struct{})
 	}
 	for i := range ids {
-		delete(m._Participants, ids[i])
-		m.removed_Participants[ids[i]] = struct{}{}
+		delete(m.participants, ids[i])
+		m.removedparticipants[ids[i]] = struct{}{}
 	}
 }
 
-// RemovedParticipants returns the removed IDs of the "Participants" edge to the Participant entity.
+// RemovedParticipants returns the removed IDs of the "participants" edge to the Participant entity.
 func (m *UserMutation) RemovedParticipantsIDs() (ids []int) {
-	for id := range m.removed_Participants {
+	for id := range m.removedparticipants {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// ParticipantsIDs returns the "Participants" edge IDs in the mutation.
+// ParticipantsIDs returns the "participants" edge IDs in the mutation.
 func (m *UserMutation) ParticipantsIDs() (ids []int) {
-	for id := range m._Participants {
+	for id := range m.participants {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// ResetParticipants resets all changes to the "Participants" edge.
+// ResetParticipants resets all changes to the "participants" edge.
 func (m *UserMutation) ResetParticipants() {
-	m._Participants = nil
-	m.cleared_Participants = false
-	m.removed_Participants = nil
+	m.participants = nil
+	m.clearedparticipants = false
+	m.removedparticipants = nil
 }
 
 // Where appends a list predicates to the UserMutation builder.
@@ -2354,7 +2612,7 @@ func (m *UserMutation) ResetField(name string) error {
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *UserMutation) AddedEdges() []string {
 	edges := make([]string, 0, 1)
-	if m._Participants != nil {
+	if m.participants != nil {
 		edges = append(edges, user.EdgeParticipants)
 	}
 	return edges
@@ -2365,8 +2623,8 @@ func (m *UserMutation) AddedEdges() []string {
 func (m *UserMutation) AddedIDs(name string) []ent.Value {
 	switch name {
 	case user.EdgeParticipants:
-		ids := make([]ent.Value, 0, len(m._Participants))
-		for id := range m._Participants {
+		ids := make([]ent.Value, 0, len(m.participants))
+		for id := range m.participants {
 			ids = append(ids, id)
 		}
 		return ids
@@ -2377,7 +2635,7 @@ func (m *UserMutation) AddedIDs(name string) []ent.Value {
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *UserMutation) RemovedEdges() []string {
 	edges := make([]string, 0, 1)
-	if m.removed_Participants != nil {
+	if m.removedparticipants != nil {
 		edges = append(edges, user.EdgeParticipants)
 	}
 	return edges
@@ -2388,8 +2646,8 @@ func (m *UserMutation) RemovedEdges() []string {
 func (m *UserMutation) RemovedIDs(name string) []ent.Value {
 	switch name {
 	case user.EdgeParticipants:
-		ids := make([]ent.Value, 0, len(m.removed_Participants))
-		for id := range m.removed_Participants {
+		ids := make([]ent.Value, 0, len(m.removedparticipants))
+		for id := range m.removedparticipants {
 			ids = append(ids, id)
 		}
 		return ids
@@ -2400,7 +2658,7 @@ func (m *UserMutation) RemovedIDs(name string) []ent.Value {
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *UserMutation) ClearedEdges() []string {
 	edges := make([]string, 0, 1)
-	if m.cleared_Participants {
+	if m.clearedparticipants {
 		edges = append(edges, user.EdgeParticipants)
 	}
 	return edges
@@ -2411,7 +2669,7 @@ func (m *UserMutation) ClearedEdges() []string {
 func (m *UserMutation) EdgeCleared(name string) bool {
 	switch name {
 	case user.EdgeParticipants:
-		return m.cleared_Participants
+		return m.clearedparticipants
 	}
 	return false
 }

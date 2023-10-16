@@ -24,6 +24,7 @@ type PillarQuery struct {
 	inters     []Interceptor
 	predicates []predicate.Pillar
 	withTasks  *TaskQuery
+	withFKs    bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -347,11 +348,15 @@ func (pq *PillarQuery) prepareQuery(ctx context.Context) error {
 func (pq *PillarQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Pillar, error) {
 	var (
 		nodes       = []*Pillar{}
+		withFKs     = pq.withFKs
 		_spec       = pq.querySpec()
 		loadedTypes = [1]bool{
 			pq.withTasks != nil,
 		}
 	)
+	if withFKs {
+		_spec.Node.Columns = append(_spec.Node.Columns, pillar.ForeignKeys...)
+	}
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*Pillar).scanValues(nil, columns)
 	}

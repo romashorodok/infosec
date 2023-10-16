@@ -23,6 +23,7 @@ func (Participant) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("boards", Board.Type).Ref("participants"),
 		edge.From("tasks", Task.Type).Ref("participants"),
+		edge.From("user", User.Type).Ref("participants").Unique(),
 	}
 }
 

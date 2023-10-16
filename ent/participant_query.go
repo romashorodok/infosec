@@ -11,10 +11,12 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/google/uuid"
 	"github.com/romashorodok/infosec/ent/board"
 	"github.com/romashorodok/infosec/ent/participant"
 	"github.com/romashorodok/infosec/ent/predicate"
 	"github.com/romashorodok/infosec/ent/task"
+	"github.com/romashorodok/infosec/ent/user"
 )
 
 // ParticipantQuery is the builder for querying Participant entities.
@@ -26,6 +28,7 @@ type ParticipantQuery struct {
 	predicates []predicate.Participant
 	withBoards *BoardQuery
 	withTasks  *TaskQuery
+	withUser   *UserQuery
 	withFKs    bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
@@ -100,6 +103,28 @@ func (pq *ParticipantQuery) QueryTasks() *TaskQuery {
 			sqlgraph.From(participant.Table, participant.FieldID, selector),
 			sqlgraph.To(task.Table, task.FieldID),
 			sqlgraph.Edge(sqlgraph.M2M, true, participant.TasksTable, participant.TasksPrimaryKey...),
+		)
+		fromU = sqlgraph.SetNeighbors(pq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryUser chains the current query on the "user" edge.
+func (pq *ParticipantQuery) QueryUser() *UserQuery {
+	query := (&UserClient{config: pq.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := pq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := pq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(participant.Table, participant.FieldID, selector),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, participant.UserTable, participant.UserColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(pq.driver.Dialect(), step)
 		return fromU, nil
@@ -301,6 +326,7 @@ func (pq *ParticipantQuery) Clone() *ParticipantQuery {
 		predicates: append([]predicate.Participant{}, pq.predicates...),
 		withBoards: pq.withBoards.Clone(),
 		withTasks:  pq.withTasks.Clone(),
+		withUser:   pq.withUser.Clone(),
 		// clone intermediate query.
 		sql:  pq.sql.Clone(),
 		path: pq.path,
@@ -326,6 +352,17 @@ func (pq *ParticipantQuery) WithTasks(opts ...func(*TaskQuery)) *ParticipantQuer
 		opt(query)
 	}
 	pq.withTasks = query
+	return pq
+}
+
+// WithUser tells the query-builder to eager-load the nodes that are connected to
+// the "user" edge. The optional arguments are used to configure the query builder of the edge.
+func (pq *ParticipantQuery) WithUser(opts ...func(*UserQuery)) *ParticipantQuery {
+	query := (&UserClient{config: pq.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	pq.withUser = query
 	return pq
 }
 
@@ -386,11 +423,15 @@ func (pq *ParticipantQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*
 		nodes       = []*Participant{}
 		withFKs     = pq.withFKs
 		_spec       = pq.querySpec()
-		loadedTypes = [2]bool{
+		loadedTypes = [3]bool{
 			pq.withBoards != nil,
 			pq.withTasks != nil,
+			pq.withUser != nil,
 		}
 	)
+	if pq.withUser != nil {
+		withFKs = true
+	}
 	if withFKs {
 		_spec.Node.Columns = append(_spec.Node.Columns, participant.ForeignKeys...)
 	}
@@ -423,6 +464,12 @@ func (pq *ParticipantQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*
 		if err := pq.loadTasks(ctx, query, nodes,
 			func(n *Participant) { n.Edges.Tasks = []*Task{} },
 			func(n *Participant, e *Task) { n.Edges.Tasks = append(n.Edges.Tasks, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := pq.withUser; query != nil {
+		if err := pq.loadUser(ctx, query, nodes, nil,
+			func(n *Participant, e *User) { n.Edges.User = e }); err != nil {
 			return nil, err
 		}
 	}
@@ -547,6 +594,38 @@ func (pq *ParticipantQuery) loadTasks(ctx context.Context, query *TaskQuery, nod
 		}
 		for kn := range nodes {
 			assign(kn, n)
+		}
+	}
+	return nil
+}
+func (pq *ParticipantQuery) loadUser(ctx context.Context, query *UserQuery, nodes []*Participant, init func(*Participant), assign func(*Participant, *User)) error {
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*Participant)
+	for i := range nodes {
+		if nodes[i].user_participants == nil {
+			continue
+		}
+		fk := *nodes[i].user_participants
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(user.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "user_participants" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
 		}
 	}
 	return nil

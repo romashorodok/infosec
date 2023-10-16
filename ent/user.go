@@ -29,8 +29,8 @@ type User struct {
 
 // UserEdges holds the relations/edges for other nodes in the graph.
 type UserEdges struct {
-	// Participants holds the value of the Participants edge.
-	Participants []*Participant `json:"Participants,omitempty"`
+	// Participants holds the value of the participants edge.
+	Participants []*Participant `json:"participants,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [1]bool
@@ -42,7 +42,7 @@ func (e UserEdges) ParticipantsOrErr() ([]*Participant, error) {
 	if e.loadedTypes[0] {
 		return e.Participants, nil
 	}
-	return nil, &NotLoadedError{edge: "Participants"}
+	return nil, &NotLoadedError{edge: "participants"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -100,7 +100,7 @@ func (u *User) Value(name string) (ent.Value, error) {
 	return u.selectValues.Get(name)
 }
 
-// QueryParticipants queries the "Participants" edge of the User entity.
+// QueryParticipants queries the "participants" edge of the User entity.
 func (u *User) QueryParticipants() *ParticipantQuery {
 	return NewUserClient(u.config).QueryParticipants(u)
 }

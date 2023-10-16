@@ -27,10 +27,10 @@ func (User) Fields() []ent.Field {
 
 func (User) Edges() []ent.Edge {
 	return []ent.Edge{
-		edge.To("Participants", Participant.Type),
+		edge.To("participants", Participant.Type),
 	}
 }
- 
+
 func (User) Annotations() []schema.Annotation {
 	return []schema.Annotation{
 		entutils.ElkSecurity,
