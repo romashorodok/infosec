@@ -3,6 +3,7 @@ package kanban
 import (
 	"encoding/json"
 	"log"
+	"log/slog"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -19,7 +20,7 @@ type handler struct {
 	Unimplemented
 
 	handlerSpecValidator openapi3utils.HandlerSpecValidator
-	kanbanService        *kanban.KanbanService
+	kanbanService        kanban.Kanban
 }
 
 var _ ServerInterface = (*handler)(nil)
@@ -31,6 +32,7 @@ func (h *handler) ListUser(w http.ResponseWriter, r *http.Request, params ListUs
 		httputils.WriteErrorResponse(w, http.StatusInternalServerError, "Not found users")
 		return
 	}
+
 	_ = json.NewEncoder(w).Encode(result)
 }
 
@@ -42,7 +44,6 @@ func (h *handler) ReadBoard(w http.ResponseWriter, r *http.Request, id int32) {
 	}
 
 	result, err := h.kanbanService.GetUesrBoard(r.Context(), token, id)
-	log.Println(result, err)
 	if err != nil {
 		httputils.WriteErrorResponse(w, http.StatusInternalServerError, "Unable find user board", err.Error())
 		return
@@ -59,7 +60,6 @@ func (h *handler) GetUserBoards(w http.ResponseWriter, r *http.Request) {
 	}
 
 	result, err := h.kanbanService.GetUserBoards(r.Context(), token)
-	log.Println(result, err)
 	if err != nil {
 		httputils.WriteErrorResponse(w, http.StatusInternalServerError, "Unable find user boards", err.Error())
 		return
@@ -79,9 +79,12 @@ func (h *handler) CreateBoard(w http.ResponseWriter, r *http.Request) {
 
 	_ = json.NewDecoder(r.Body).Decode(&req)
 
-	h.kanbanService.CreateUserBoard(r.Context(), token, kanban.CreateUserBoardParams{
+	if _, err := h.kanbanService.CreateUserBoard(r.Context(), token, kanban.CreateUserBoardParams{
 		Title: req.Title,
-	})
+	}); err != nil {
+		httputils.WriteErrorResponse(w, http.StatusPreconditionFailed, "Cannot create user board. Err:", err.Error())
+		return
+	}
 }
 
 func (h *handler) DeleteBoard(w http.ResponseWriter, r *http.Request, id int32) {
@@ -91,7 +94,10 @@ func (h *handler) DeleteBoard(w http.ResponseWriter, r *http.Request, id int32) 
 		return
 	}
 
-	h.kanbanService.DeleteUserBoard(r.Context(), token, id)
+	if _, err := h.kanbanService.DeleteUserBoard(r.Context(), token, id); err != nil {
+		httputils.WriteErrorResponse(w, http.StatusPreconditionFailed, "Cannot delete user board. Err:", err.Error())
+		return
+	}
 }
 
 // Participant
@@ -124,7 +130,10 @@ func (h *handler) RemoveBoardParticipant(w http.ResponseWriter, r *http.Request,
 
 	_ = json.NewDecoder(r.Body).Decode(&req)
 
-	h.kanbanService.DeleteBoardParticipant(r.Context(), token, id, params.UserId)
+	if _, err := h.kanbanService.DeleteBoardParticipant(r.Context(), token, id, params.UserId); err != nil {
+		httputils.WriteErrorResponse(w, http.StatusPreconditionFailed, "Cannot delete user board participant. Err:", err.Error())
+		return
+	}
 }
 
 // Pillar
@@ -136,7 +145,10 @@ func (h *handler) AddBoardPillar(w http.ResponseWriter, r *http.Request, id int3
 		return
 	}
 
-	h.kanbanService.AddBoardPillar(r.Context(), token, id)
+	if _, err := h.kanbanService.AddBoardPillar(r.Context(), token, id); err != nil {
+		httputils.WriteErrorResponse(w, http.StatusPreconditionFailed, "Cannot add board pillar. Err:", err.Error())
+		return
+	}
 }
 
 func (h *handler) RemoveBoardPillar(w http.ResponseWriter, r *http.Request, id int32, params RemoveBoardPillarParams) {
@@ -146,7 +158,10 @@ func (h *handler) RemoveBoardPillar(w http.ResponseWriter, r *http.Request, id i
 		return
 	}
 
-	h.kanbanService.RemoveBoardPillar(r.Context(), token, id, params.PillarId)
+	if _, err := h.kanbanService.RemoveBoardPillar(r.Context(), token, id, params.PillarId); err != nil {
+		httputils.WriteErrorResponse(w, http.StatusPreconditionFailed, "Cannot remove board pillar. Err:", err.Error())
+		return
+	}
 }
 
 // Task
@@ -165,10 +180,13 @@ func (h *handler) AddBoardTask(w http.ResponseWriter, r *http.Request, id int32,
 		return
 	}
 
-	h.kanbanService.AddBoardTask(r.Context(), token, id, params.PillarId, &kanban.AddBoardTaskParams{
+	if _, err := h.kanbanService.AddBoardTask(r.Context(), token, id, params.PillarId, &kanban.AddBoardTaskParams{
 		Title:       *req.Title,
 		Description: *req.Title,
-	})
+	}); err != nil {
+		httputils.WriteErrorResponse(w, http.StatusInternalServerError, "Unable add board task. Err:", err.Error())
+		return
+	}
 }
 
 func (h *handler) RemoveBoardTask(w http.ResponseWriter, r *http.Request, id int32, params RemoveBoardTaskParams) {
@@ -178,7 +196,10 @@ func (h *handler) RemoveBoardTask(w http.ResponseWriter, r *http.Request, id int
 		return
 	}
 
-	h.kanbanService.DeleteBoardTask(r.Context(), token, id, params.TaskId)
+	if _, err := h.kanbanService.DeleteBoardTask(r.Context(), token, id, params.TaskId); err != nil {
+		httputils.WriteErrorResponse(w, http.StatusInternalServerError, "Unable remove board task. Err:", err.Error())
+		return
+	}
 }
 
 func (h *handler) GetOption() httputils.HttpHandlerOption {
@@ -210,11 +231,17 @@ type HandlerParams struct {
 
 	HandlerSpecValidator openapi3utils.HandlerSpecValidator
 	KanbanService        *kanban.KanbanService
+	Logger               *slog.Logger
 }
 
 func NewHandler(params HandlerParams) *handler {
+	kanbanService := kanban.NewKanbanServiceLogging(params.KanbanService, kanban.KanbanServiceLoggingParams{
+		Logger: params.Logger,
+	})
+	// kanbanService := params.KanbanService
+
 	return &handler{
 		handlerSpecValidator: params.HandlerSpecValidator,
-		kanbanService:        params.KanbanService,
+		kanbanService:        kanbanService,
 	}
 }

@@ -4,9 +4,12 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"io"
 	"log"
+	"log/slog"
 	"net"
 	"net/http"
+	"os"
 
 	"github.com/romashorodok/infosec/ent"
 	"github.com/romashorodok/infosec/ent/migrate"
@@ -249,6 +252,22 @@ EXECUTE FUNCTION delete_related_participants();
 	return client, nil
 }
 
+func NewLogger() *slog.Logger {
+	var level slog.LevelVar
+	level.Set(slog.LevelDebug)
+
+	logFile, err := os.OpenFile("log.txt", os.O_CREATE|os.O_APPEND|os.O_RDWR, 0666)
+	if err != nil {
+		panic(err)
+	}
+	defer logFile.Close()
+
+	return slog.New(slog.NewJSONHandler(io.MultiWriter(os.Stdout, logFile), &slog.HandlerOptions{
+		AddSource: true,
+		Level:     &level,
+	}))
+}
+
 func main() {
 	router.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   []string{"https://*", "http://*"},
@@ -275,6 +294,7 @@ func main() {
 			NewRouter,
 			NewEntClient,
 
+			NewLogger,
 			NewSpecOptionsHandlerConstructor,
 
 			kanban.NewKanbanService,
@@ -292,7 +312,6 @@ func main() {
 				fx.As(new(security.SecurityService)),
 			),
 		),
-		// fx.Invoke(v1httpidentity.RegisterIdentityHandler),
 		fx.Invoke(startServer),
 		fx.Invoke(func(*ent.Client) {}),
 	).Run()
