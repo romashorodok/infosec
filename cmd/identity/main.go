@@ -260,7 +260,6 @@ func NewLogger() *slog.Logger {
 	if err != nil {
 		panic(err)
 	}
-	defer logFile.Close()
 
 	return slog.New(slog.NewJSONHandler(io.MultiWriter(os.Stdout, logFile), &slog.HandlerOptions{
 		AddSource: true,

@@ -21,6 +21,7 @@ type handler struct {
 
 	handlerSpecValidator openapi3utils.HandlerSpecValidator
 	kanbanService        kanban.Kanban
+	logger               *slog.Logger
 }
 
 var _ ServerInterface = (*handler)(nil)
@@ -216,6 +217,7 @@ func (h *handler) GetOption() httputils.HttpHandlerOption {
 			options := ChiServerOptions{
 				BaseRouter: mux,
 				Middlewares: []MiddlewareFunc{
+					httputils.LoggerMiddleware(h.logger),
 					h.handlerSpecValidator(spec),
 					httputils.JsonMiddleware(),
 				},
@@ -243,5 +245,6 @@ func NewHandler(params HandlerParams) *handler {
 	return &handler{
 		handlerSpecValidator: params.HandlerSpecValidator,
 		kanbanService:        kanbanService,
+		logger:               params.Logger,
 	}
 }
